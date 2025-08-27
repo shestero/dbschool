@@ -9,7 +9,7 @@
 #include <QKeyEvent>
 #include <QMenu>
 #include <QDebug>
-#include <qt5/QtCore/qnamespace.h>
+//#include <qt5/QtCore/qnamespace.h>
 
 #include "ReadOnlyDelegate.h"
 #include "csvtablemodel.h"

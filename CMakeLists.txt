@@ -1,9 +1,10 @@
-cmake_minimum_required(VERSION 3.5.1)
-#cmake_minimum_required(VERSION 3.25.1)
+cmake_minimum_required(VERSION 3.25.1)
+#cmake_minimum_required(VERSION 3.5.1)
 # cmake_minimum_required(VERSION 3.31)
 project(dbschool1)
 
 set(CMAKE_CXX_STANDARD 14)
+#set(CMAKE_CXX_STANDARD 17)
 #set(CMAKE_CXX_STANDARD 23)
 set(CMAKE_AUTOMOC ON)
 set(CMAKE_AUTORCC ON)
@@ -48,11 +49,31 @@ add_executable(dbschool1 main.cpp
         ForeignKeyDelegate.cpp
         ForeignKeyDelegate.h
         CustomComboBoxSortFilterProxyModel.cpp
-        CustomComboBoxSortFilterProxyModel.h)
+        CustomComboBoxSortFilterProxyModel.h
+        Configuration.cpp
+        Configuration.h)
+
+include(FetchContent)
+#FetchContent_Declare(
+#        tomlplusplus
+#        GIT_REPOSITORY https://github.com/marzer/tomlplusplus.git
+#        GIT_TAG v3.4.0
+#)
+#FetchContent_MakeAvailable(tomlplusplus)
+#find_package(tomlplusplus CONFIG REQUIRED)
+#add_subdirectory(toml++)
+
+FetchContent_Declare(
+        toml11
+        GIT_REPOSITORY https://github.com/ToruNiina/toml11.git
+        GIT_TAG        v4.4.0
+)
+FetchContent_MakeAvailable(toml11)
 
 target_link_libraries(dbschool1
         Qt5::Core
         Qt5::Gui
         Qt5::Widgets
+        #tomlplusplus::tomlplusplus
+        toml11::toml11
 )
-

@@ -23,5 +23,36 @@
         <source>Sections</source>
         <translation>Секции</translation>
     </message>
+    <message>
+        <source>toolbar</source>
+        <translation>Панель инструментов</translation>
+    </message>
+    <message>
+        <source>Send tables</source>
+        <translation>Отправить таблицы</translation>
+    </message>
+    <message>
+        <source>Receive tables</source>
+        <translation>Получить таблицы</translation>
+    </message>
+    <message>
+        <source>Renew students</source>
+        <translation>Обновить список студентов</translation>
+    </message>
+    <message>
+        <source>Generate tables</source>
+        <translation>Создать таблицы</translation>
+    </message>
+</context>
+<context>
+    <name>TableView</name>
+    <message>
+        <source>Context menu</source>
+        <translation>Контекстное меню</translation>
+    </message>
+    <message>
+        <source>&amp;Copy</source>
+        <translation type="unfinished"></translation>
+    </message>
 </context>
 </TS>

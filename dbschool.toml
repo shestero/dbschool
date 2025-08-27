@@ -1,0 +1,7 @@
+#teachserver = "http://195.2.74.29"
+teachserver = "http://localhost:8080"
+
+[api]
+login = "api"
+passwrod = "QuuZ2iel"
+
