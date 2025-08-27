@@ -13,6 +13,8 @@ public:
     Configuration();
 
     string teach_server;
+    string login;
+    string password;
 
     static const char* config_file_name;
 };

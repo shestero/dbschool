@@ -16,6 +16,8 @@ find_package(Qt5 COMPONENTS
         Gui
         Widgets
         LinguistTools
+        Network
+        Concurrent
         REQUIRED)
 
 set(TS_FILES
@@ -51,7 +53,11 @@ add_executable(dbschool1 main.cpp
         CustomComboBoxSortFilterProxyModel.cpp
         CustomComboBoxSortFilterProxyModel.h
         Configuration.cpp
-        Configuration.h)
+        Configuration.h
+        LastAttendanceDate.cpp
+        LastAttendanceDate.h
+        NetworkInteraction.cpp
+        NetworkInteraction.h)
 
 include(FetchContent)
 #FetchContent_Declare(
@@ -74,6 +80,8 @@ target_link_libraries(dbschool1
         Qt5::Core
         Qt5::Gui
         Qt5::Widgets
+        Qt5::Network
+        Qt5::Concurrent
         #tomlplusplus::tomlplusplus
         toml11::toml11
 )

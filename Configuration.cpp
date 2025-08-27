@@ -20,6 +20,9 @@ Configuration::Configuration()
         teach_server = tbl["teachserver"].as_string()->get();
         */
         teach_server = config.at("teachserver").as_string();
+        login = config.at("api").at("login").as_string();
+        password = config.at("api").at("password").as_string();
+
         cout << "teach_server = " << teach_server << endl;
         cout << "configuration " << config_file_name << " was successfullly parsed!" << endl;
     }

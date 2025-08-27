@@ -8,6 +8,8 @@
 #include <QMainWindow>
 #include <QTableWidget>
 
+#include "NetworkInteraction.h"
+
 
 class MainWindow : public QMainWindow {
 Q_OBJECT
@@ -15,6 +17,15 @@ Q_OBJECT
 public:
     explicit MainWindow(QWidget *parent = nullptr);
     ~MainWindow() override;
+
+public slots:
+    void onCreateAttendanceTables();
+    void onSendAttendanceTables();
+    void onReceiveAttendanceTables();
+    void onRefreshStudentTable();
+
+private:
+    NetworkInteraction* network_interaction;
 };
 
 
