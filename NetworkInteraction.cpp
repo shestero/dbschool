@@ -7,9 +7,10 @@
 
 #include <QAuthenticator>
 #include <QObject>
+#include <QEventLoop>
+#include <QNetworkAccessManager>
+
 #include <QDebug>
-#include <qt5/QtCore/qobject.h>
-#include <qt5/QtNetwork/qnetworkaccessmanager.h>
 
 NetworkInteraction::NetworkInteraction(QObject* parent):
     QObject(parent),
@@ -37,6 +38,24 @@ void NetworkInteraction::handleFinished(QNetworkReply *reply)
     }
     //reply->deleteLater();
     //QCoreApplication::quit();
+}
+
+QNetworkRequest NetworkInteraction::request(const QUrl& url)
+{
+    QNetworkRequest request(url);
+
+    // Concatenate username and password with a colon and encode to base64
+    Configuration config;
+    const QString username = QString(config.login.c_str());
+    const QString password = QString(config.password.c_str());
+    QString credentials = username + ":" + password;
+    QByteArray encodedData = credentials.toLocal8Bit().toBase64();
+    QString headerData = "Basic " + encodedData;
+
+    // Set the Authorization header
+    request.setRawHeader("Authorization", headerData.toLocal8Bit());
+
+    return request;
 }
 
 //#include <QNetworkAccessManager>
@@ -70,21 +89,27 @@ QFuture<QString> replyToFuture(QNetworkReply *reply) {
     return iface.future();
 }
 
+QString NetworkInteraction::syncReply(QNetworkReply* reply)
+{
+    QEventLoop loop;
+    connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
+    loop.exec(); // This line waits for the reply to finish
+
+    if (reply->error() == QNetworkReply::NoError) {
+        QByteArray data = reply->readAll();
+        qDebug() << "Data received:" << data;
+        reply->deleteLater(); // Clean up the reply object
+        return {data.toStdString().c_str()};
+    } else {
+        qDebug() << "Error:" << reply->errorString();
+        reply->deleteLater(); // Clean up the reply object
+        return {};
+    }
+}
+
 void NetworkInteraction::startRequest(const QUrl &url)
 {
-    QNetworkRequest request(url);
-
-    // Concatenate username and password with a colon and encode to base64
-    Configuration config;
-    const QString username = QString(config.login.c_str());
-    const QString password = QString(config.password.c_str());
-    QString credentials = username + ":" + password;
-    QByteArray encodedData = credentials.toLocal8Bit().toBase64();
-    QString headerData = "Basic " + encodedData;
-
-    // Set the Authorization header
-    request.setRawHeader("Authorization", headerData.toLocal8Bit());
-
+    QNetworkRequest request = this->request(url);
     QNetworkReply* reply = manager->get(request);
 
     /*
@@ -144,7 +169,7 @@ void NetworkInteraction::receiveTables()
     auto url = api("attendance");
 }
 
-void NetworkInteraction::deleteTables(const QStringList ids)
+void NetworkInteraction::deleteTables(const QStringList& ids)
 {
     auto url = api("attendance");
 }

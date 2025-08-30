@@ -5,6 +5,7 @@
 #ifndef MAINWINDOW_H
 #define MAINWINDOW_H
 
+#include <QAction>
 #include <QMainWindow>
 #include <QTableWidget>
 
@@ -23,9 +24,14 @@ public slots:
     void onSendAttendanceTables();
     void onReceiveAttendanceTables();
     void onRefreshStudentTable();
+    void onRegularChecks();
+
+signals:
+    void sendMessage(const QString &msg);
 
 private:
     NetworkInteraction* network_interaction;
+    QAction* sendAction;
 };
 
 

@@ -24,7 +24,7 @@ Configuration::Configuration()
         password = config.at("api").at("password").as_string();
 
         cout << "teach_server = " << teach_server << endl;
-        cout << "configuration " << config_file_name << " was successfullly parsed!" << endl;
+        cout << "configuration " << config_file_name << " was successfully parsed!" << endl;
     }
     catch (...) // (const toml::parse_error& err)
     {

@@ -7,6 +7,7 @@
 
 #include <QWidget>
 #include <QNetworkAccessManager>
+#include <QNetworkRequest>
 #include <QNetworkReply>
 
 class NetworkInteraction: public QObject
@@ -18,17 +19,15 @@ public:
 
     inline const QUrl api(QString key) const;
 
+    QNetworkRequest request(const QUrl &url);
+    QString syncReply(QNetworkReply* reply);
+
     QString getStudentsHash();
     void sendStudents();
     void sendTables();
     void receiveTables();
-    void deleteTables(const QStringList ids);
+    void deleteTables(const QStringList& ids);
 
-    void getRequest(const QUrl &url)
-    {
-        QNetworkRequest request(url);
-        manager->get(request);
-    }
 
 private:
     void startRequest(const QUrl &url);

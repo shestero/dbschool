@@ -57,7 +57,9 @@ add_executable(dbschool1 main.cpp
         LastAttendanceDate.cpp
         LastAttendanceDate.h
         NetworkInteraction.cpp
-        NetworkInteraction.h)
+        NetworkInteraction.h
+        ProtocolDialog.cpp
+        ProtocolDialog.h)
 
 include(FetchContent)
 #FetchContent_Declare(

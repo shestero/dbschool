@@ -8,13 +8,23 @@
 #include "csvtablemodel.h"
 #include "tableview.h"
 #include "ForeignKeyDelegate.h"
+#include "ProtocolDialog.h"
 
 #include <QAction>
 #include <QApplication>
+#include <QDir>
 #include <QIcon>
+#include <QMessageBox>
+#include <QThread>
 #include <QToolBar>
 #include <QToolButton>
 #include <QVBoxLayout>
+
+#include <QtConcurrent/QtConcurrent>
+#include <QFuture>
+#include <QFutureInterface>
+#include <QFutureWatcher>
+
 #include <QDebug>
 
 #define LASTDATE_FILENAME   "last-date.txt"
@@ -56,7 +66,7 @@ MainWindow::MainWindow(QWidget *parent) :
     toolBar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
     QAction* createAction =
         new QAction(QApplication::style()->standardIcon(QStyle::SP_FileDialogNewFolder), tr("Generate tables"), this);
-    QAction* sendAction =
+    sendAction =
         new QAction(QApplication::style()->standardIcon(QStyle::SP_ArrowForward), tr("Send tables"), this);
     QAction* receiveAction =
         new QAction(QApplication::style()->standardIcon(QStyle::SP_ArrowBack), tr("Receive tables"), this);
@@ -87,10 +97,15 @@ MainWindow::MainWindow(QWidget *parent) :
     verticalLayout->addWidget(toolBar);
     verticalLayout->addWidget(pTabs);
     setCentralWidget(centralWidget);
+
+    // check timer
+    QTimer *checkTimer = new QTimer(this);
+    checkTimer->setInterval(1000);
+    connect(checkTimer, &QTimer::timeout, this, &MainWindow::onRegularChecks);
+    checkTimer->start();
 }
 
-MainWindow::~MainWindow() {
-}
+MainWindow::~MainWindow() = default;
 
 void MainWindow::onCreateAttendanceTables()
 {
@@ -99,8 +114,30 @@ void MainWindow::onCreateAttendanceTables()
     gl_lastAttendanceDate.set(date);
 }
 
+template<typename T>
+inline QFuture<T> makeReadyFuture(const T &value) {
+    QFutureInterface<T> iface;
+    iface.reportStarted();
+    iface.reportResult(value);
+    iface.reportFinished();
+    return iface.future();
+}
+
 void MainWindow::onSendAttendanceTables()
 {
+    // Чтение списка таблиц на отправку
+    const QStringList files =
+        QDir("attendance/outbox").entryList(QStringList() << "*.tsv", QDir::Files);
+
+    if (files.isEmpty())
+    {
+        QMessageBox::information(
+            this,
+            tr("Sending attendance tables"),
+            tr("No tables ready to send. Please, create tables first!"));
+        return;
+    }
+
 }
 
 void MainWindow::onReceiveAttendanceTables()
@@ -111,4 +148,10 @@ void MainWindow::onRefreshStudentTable()
 {
     auto hash = network_interaction->getStudentsHash();
     qDebug() << QString("hash=") << hash;
+}
+
+void MainWindow::onRegularChecks() {
+    sendAction->setEnabled(
+        !QDir("attendance/outbox").entryList(QStringList() << "*.tsv", QDir::Files).isEmpty()
+    );
 }
