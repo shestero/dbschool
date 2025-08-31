@@ -1,7 +1,0 @@
-#teachserver = "http://195.2.74.29"
-teachserver = "http://localhost:8888"
-
-[api]
-login = "api"
-password = "QuuZ2iel"
-
