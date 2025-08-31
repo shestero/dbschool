@@ -53,7 +53,7 @@ jobs:
         version: '5.15.2'
         dir: '${{ github.workspace }}/extern/'
         install-deps: 'true'
-        archives: 'qtbase icu'
+        archives: 'qtbase qttools icu'
         cache: 'true'
         cache-key-prefix: 'install-qt-action'
         
