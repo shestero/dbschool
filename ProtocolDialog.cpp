@@ -2,17 +2,17 @@
 
 #include <QVBoxLayout>
 
-ProtocolDialog::ProtocolDialog(QWidget *parent)
+ProtocolDialog::ProtocolDialog(const QString& title, QWidget *parent)
     : QDialog(parent)
 {
-    setWindowTitle("Протокол операции");
+    setWindowTitle(tr("Execution: %1").arg(title));
     setWindowFlags(windowFlags() | Qt::WindowStaysOnTopHint);
 
-    textEdit = new QTextEdit(this);
-    textEdit->setReadOnly(true);
-
     auto layout = new QVBoxLayout(this);
-    layout->addWidget(textEdit);
+    layout->addWidget(textEdit = new QTextEdit(this));
+    layout->addWidget(progressBar = new QProgressBar(this));
+
+    textEdit->setReadOnly(true);
 
     resize(500, 300);
 }

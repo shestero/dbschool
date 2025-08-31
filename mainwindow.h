@@ -24,12 +24,15 @@ public slots:
     void onSendAttendanceTables();
     void onReceiveAttendanceTables();
     void onRefreshStudentTable();
+    void onIssueInvoices();
     void onRegularChecks();
 
 signals:
     void sendMessage(const QString &msg);
 
 private:
+    QString calculateSha256Hash(const QString &filePath);
+
     NetworkInteraction* network_interaction;
     QAction* sendAction;
 };

@@ -150,8 +150,10 @@ const QUrl NetworkInteraction::api(QString key) const
 QString NetworkInteraction::getStudentsHash()
 {
     auto url = api("students/hash");
-    startRequest(url);
-    return "unknown"; // todo
+    QNetworkRequest request = this->request(url);
+    QNetworkReply* reply = manager->get(request);
+    auto hash = syncReply(reply);
+    return hash;
 }
 
 void NetworkInteraction::sendStudents()

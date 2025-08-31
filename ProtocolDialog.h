@@ -6,13 +6,14 @@
 #define DBSCHOOL1_PROTOCOLDIALOG_H
 
 #include <QDialog>
-#include <QTextEdit>
+#include <QProgressBar>
 #include <QPushButton>
+#include <QTextEdit>
 
 class ProtocolDialog : public QDialog {
     Q_OBJECT
 public:
-    ProtocolDialog(QWidget *parent = nullptr);
+    ProtocolDialog(const QString& title, QWidget *parent = nullptr);
 
 public slots:
     void appendLog(const QString& line) {
@@ -21,6 +22,7 @@ public slots:
 
 private:
     QTextEdit *textEdit;
+    QProgressBar* progressBar;
 };
 
 #endif //DBSCHOOL1_PROTOCOLDIALOG_H

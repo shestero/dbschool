@@ -3,6 +3,7 @@
 //
 
 #include "mainwindow.h"
+#include "Configuration.h"
 #include "LastAttendanceDate.h"
 #include "NetworkInteraction.h"
 #include "csvtablemodel.h"
@@ -72,25 +73,21 @@ MainWindow::MainWindow(QWidget *parent) :
         new QAction(QApplication::style()->standardIcon(QStyle::SP_ArrowBack), tr("Receive tables"), this);
     QAction* refreshStudentAction =
         new QAction(QApplication::style()->standardIcon(QStyle::SP_BrowserReload), tr("Renew students"), this);
+    QAction* issueInvoicesAction =
+        new QAction(QApplication::style()->standardIcon(QStyle::SP_FileIcon), tr("Issue invoices"), this);
 
     toolBar->addAction(createAction);
     toolBar->addAction(sendAction);
     toolBar->addAction(receiveAction);
     toolBar->addAction(refreshStudentAction);
+    toolBar->addAction(issueInvoicesAction);
+    toolBar->insertSeparator(issueInvoicesAction);
 
     connect(createAction, &QAction::triggered, this, &MainWindow::onCreateAttendanceTables);
     connect(sendAction, &QAction::triggered, this, &MainWindow::onSendAttendanceTables);
     connect(receiveAction, &QAction::triggered, this, &MainWindow::onReceiveAttendanceTables);
     connect(refreshStudentAction, &QAction::triggered, this, &MainWindow::onRefreshStudentTable);
-
-    // You can also add QToolButton directly if preferred
-    /*
-    auto updateStudentsButton = new QToolButton(this);
-    updateStudentsButton->setIcon(QIcon(QApplication::style()->standardIcon(QStyle::SP_BrowserReload)));
-    updateStudentsButton->setText(tr("Renew students"));
-    updateStudentsButton->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
-    toolBar->addWidget(updateStudentsButton);
-    */
+    connect(issueInvoicesAction, &QAction::triggered, this, &MainWindow::onIssueInvoices);
 
     auto centralWidget = new QWidget();
     auto verticalLayout = new QVBoxLayout(centralWidget);
@@ -112,8 +109,14 @@ void MainWindow::onCreateAttendanceTables()
     QDate date = gl_lastAttendanceDate.get();
     date = date.addDays(1);
     gl_lastAttendanceDate.set(date);
+
+    QMessageBox::critical(
+        this,
+        tr("Creating attendance tables"),
+        tr("Under construction"));
 }
 
+// todo
 template<typename T>
 inline QFuture<T> makeReadyFuture(const T &value) {
     QFutureInterface<T> iface;
@@ -138,16 +141,83 @@ void MainWindow::onSendAttendanceTables()
         return;
     }
 
+    QMessageBox::critical(
+        this,
+        tr("Sending attendance tables"),
+        tr("Under construction"));
 }
 
 void MainWindow::onReceiveAttendanceTables()
 {
+    QMessageBox::critical(
+        this,
+        tr("Receiving attendance tables"),
+        tr("Under construction"));
+}
+
+QString MainWindow::calculateSha256Hash(const QString &filePath) {
+    QFile file(filePath);
+    if (!file.open(QFile::ReadOnly)) {
+        QMessageBox::warning(
+            this,
+            tr("Calculating hash"),
+            tr("Could not open file: %1").arg(filePath)
+        );
+        return QString();
+    }
+
+    QCryptographicHash hash(QCryptographicHash::Sha256);
+    if (hash.addData(&file)) {
+        return hash.result().toHex();
+    } else {
+        QMessageBox::warning(
+            this,
+            tr("Calculating hash"),
+            tr("Failed to add data to hash calculation for file: %1").arg(filePath)
+        );
+        return QString();
+    }
 }
 
 void MainWindow::onRefreshStudentTable()
 {
-    auto hash = network_interaction->getStudentsHash();
-    qDebug() << QString("hash=") << hash;
+    const QString hash_local = calculateSha256Hash("students.tsv");
+    if (hash_local.isEmpty())
+        return;
+
+    const QString hash_remote = network_interaction->getStudentsHash();
+    qDebug() << "hash_local" << hash_local << "hash_remote=" << hash_remote;
+    if (hash_remote.isEmpty())
+    {
+        QMessageBox::critical(
+            this,
+            tr("Renew students table"),
+            tr("Cannot get information from the server %1").arg(Configuration().teach_server.c_str())
+        );
+        return;
+    }
+    if (hash_local == hash_remote)
+    {
+        QMessageBox::information(
+            this,
+            tr("Renew students table"),
+            tr("Students table at the server is up to date")
+        );
+        return;
+    }
+
+    QMessageBox::critical(
+        this,
+        tr("Renew students table"),
+        tr("Under construction"));
+}
+
+void MainWindow::onIssueInvoices()
+{
+    QMessageBox::critical(
+        this,
+        tr("Issue invoices"),
+        tr("Under construction"));
 }
 
 void MainWindow::onRegularChecks() {
