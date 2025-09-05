@@ -7,6 +7,8 @@
 #include "LastAttendanceDate.h"
 #include "NetworkInteraction.h"
 #include "csvtablemodel.h"
+#include "generateinvoices.h"
+#include "generatetables.h"
 #include "tableview.h"
 #include "ForeignKeyDelegate.h"
 #include "ProtocolDialog.h"
@@ -27,6 +29,8 @@
 #include <QFutureWatcher>
 
 #include <QDebug>
+
+#include "ui_generatetables.h"
 
 #define LASTDATE_FILENAME   "last-date.txt"
 static LastAttendanceDate gl_lastAttendanceDate = LastAttendanceDate(LASTDATE_FILENAME);
@@ -110,10 +114,20 @@ void MainWindow::onCreateAttendanceTables()
     date = date.addDays(1);
     gl_lastAttendanceDate.set(date);
 
-    QMessageBox::critical(
-        this,
-        tr("Creating attendance tables"),
-        tr("Under construction"));
+    GenerateTables* dialog = new GenerateTables(date, this);
+
+    int result = dialog->exec(); // Show the dialog modally
+
+    if (result == QDialog::Accepted) {
+        // Dialog was accepted (e.g., OK button clicked)
+        qDebug() << "Custom dialog accepted!";
+
+    } else {
+        // Dialog was rejected (e.g., Cancel button clicked or closed)
+        qDebug() << "Custom dialog rejected!";
+    }
+
+    dialog->deleteLater();
 }
 
 // todo
@@ -211,10 +225,21 @@ void MainWindow::onRefreshStudentTable()
 
 void MainWindow::onIssueInvoices()
 {
-    QMessageBox::critical(
-        this,
-        tr("Issue invoices"),
-        tr("Under construction"));
+    GenerateInvoices* dialog = new GenerateInvoices(this);
+
+    int result = dialog->exec(); // Show the dialog modally
+
+    if (result == QDialog::Accepted) {
+        // Dialog was accepted (e.g., OK button clicked)
+        qDebug() << "Custom dialog (issue invoices) accepted!";
+
+    } else {
+        // Dialog was rejected (e.g., Cancel button clicked or closed)
+        qDebug() << "Custom dialog (issue invoices) rejected!";
+    }
+
+    dialog->deleteLater();
+
 }
 
 void MainWindow::onRegularChecks() {

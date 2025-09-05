@@ -2,6 +2,40 @@
 <!DOCTYPE TS>
 <TS version="2.1" language="ru_RU">
 <context>
+    <name>GenerateInvoices</name>
+    <message>
+        <source>Issue invoices</source>
+        <translation>Выставить счета</translation>
+    </message>
+    <message>
+        <source>GenerateInvoices</source>
+        <translation type="unfinished"></translation>
+    </message>
+</context>
+<context>
+    <name>GenerateTables</name>
+    <message>
+        <source>GenerateTables</source>
+        <translation>Создание бланков посещаемости</translation>
+    </message>
+    <message>
+        <source>From: </source>
+        <translation>Начиная с даты: </translation>
+    </message>
+    <message>
+        <source>Till: </source>
+        <translation>По дату (включительно): </translation>
+    </message>
+    <message>
+        <source>Ok</source>
+        <translation type="vanished">Сделать!</translation>
+    </message>
+    <message>
+        <source>Cancel</source>
+        <translation type="vanished">Отмена</translation>
+    </message>
+</context>
+<context>
     <name>MainWindow</name>
     <message>
         <source>School accounting</source>
@@ -45,7 +79,7 @@
     </message>
     <message>
         <source>Creating attendance tables</source>
-        <translation>Генерация бланков посещаемости</translation>
+        <translation type="vanished">Генерация бланков посещаемости</translation>
     </message>
     <message>
         <source>Under construction</source>
@@ -90,6 +124,29 @@
     <message>
         <source>Students table at the server is up to date</source>
         <translation>Список студентов на сервере в актуальном состоянии</translation>
+    </message>
+</context>
+<context>
+    <name>NetworkInteraction</name>
+    <message>
+        <source>Cannot open file %1 !</source>
+        <translation>Не могу открыть файл %1 !</translation>
+    </message>
+    <message>
+        <source>	- file sent</source>
+        <translation> - файл отправлен на сервер</translation>
+    </message>
+    <message>
+        <source>	- file deleted</source>
+        <translation> - файл удалён</translation>
+    </message>
+    <message>
+        <source>	- Cannot delete the file!!</source>
+        <translation> - Не могу удалить файл!</translation>
+    </message>
+    <message>
+        <source>Sending new blanks to the servers</source>
+        <translation>Отправка новых бланков посещаемости на сервер</translation>
     </message>
 </context>
 <context>

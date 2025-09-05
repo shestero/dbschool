@@ -39,8 +39,8 @@ add_custom_target(update_translations
 # This ensures that lrelease compiles the .ts files into .qm files during the build process.
 #qt5_add_translations(dbschool1 ${TS_FILES})
 
-
-add_executable(dbschool1 main.cpp
+add_executable(dbschool1
+        main.cpp
         mainwindow.cpp
         mainwindow.h
         csvtablemodel.cpp
@@ -60,7 +60,14 @@ add_executable(dbschool1 main.cpp
         NetworkInteraction.h
         ProtocolDialog.cpp
         ProtocolDialog.h
-        Worker.h)
+        Worker.h
+        generatetables.ui
+        generatetables.cpp
+        generatetables.h
+        generateinvoices.cpp
+        generateinvoices.h
+        generateinvoices.ui
+)
 
 include(FetchContent)
 #FetchContent_Declare(
