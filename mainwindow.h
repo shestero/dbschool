@@ -12,11 +12,13 @@
 #include "NetworkInteraction.h"
 
 
-class MainWindow : public QMainWindow {
-Q_OBJECT
+class MainWindow : public QMainWindow
+{
+    Q_OBJECT
+    friend class NetworkInteraction;
 
 public:
-    explicit MainWindow(QWidget *parent = nullptr);
+    explicit MainWindow(QWidget* parent = nullptr);
     ~MainWindow() override;
 
 public slots:
@@ -28,12 +30,12 @@ public slots:
     void onRegularChecks();
 
 signals:
-    void sendMessage(const QString &msg);
+    void sendMessage(const QString& msg);
 
 private:
-    QString calculateSha256Hash(const QString &filePath);
+    QString calculateSha256Hash(const QString& filePath);
 
-    NetworkInteraction* network_interaction;
+    NetworkInteraction* network;
     QAction* sendAction;
 };
 

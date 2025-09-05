@@ -3,14 +3,23 @@
 //
 
 #include "NetworkInteraction.h"
-#include "Configuration.h"
 
+#include "Configuration.h"
+#include "ProtocolDialog.h"
+#include "mainwindow.h"
+
+#include <QApplication>
 #include <QAuthenticator>
 #include <QObject>
 #include <QEventLoop>
 #include <QNetworkAccessManager>
 
 #include <QDebug>
+#include <QFile>
+#include <QFileInfo>
+#include <QThread>
+
+#include "Worker.h"
 
 NetworkInteraction::NetworkInteraction(QObject* parent):
     QObject(parent),
@@ -95,16 +104,16 @@ QString NetworkInteraction::syncReply(QNetworkReply* reply)
     connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
     loop.exec(); // This line waits for the reply to finish
 
-    if (reply->error() == QNetworkReply::NoError) {
-        QByteArray data = reply->readAll();
-        qDebug() << "Data received:" << data;
-        reply->deleteLater(); // Clean up the reply object
-        return {data.toStdString().c_str()};
-    } else {
+    if (reply->error() != QNetworkReply::NoError) {
         qDebug() << "Error:" << reply->errorString();
         reply->deleteLater(); // Clean up the reply object
         return {};
     }
+
+    QByteArray data = reply->readAll();
+    qDebug() << "Data received:" << data;
+    reply->deleteLater(); // Clean up the reply object
+    return {data.toStdString().c_str() };
 }
 
 void NetworkInteraction::startRequest(const QUrl &url)
@@ -156,14 +165,102 @@ QString NetworkInteraction::getStudentsHash()
     return hash;
 }
 
+bool NetworkInteraction::renameToBak(const QString &filePath)
+{
+    QFileInfo info(filePath);
+    if (!info.exists() || !info.isFile()) {
+        qWarning() << "Файл не существует:" << filePath;
+        return false;
+    }
+
+    // Новый путь с тем же именем, но расширением .bak
+    QString newFilePath = info.path() + "/" + info.completeBaseName() + ".bak";
+
+    if (QFile::exists(newFilePath)) {
+        QFile::remove(newFilePath);  // если уже есть .bak — удаляем
+    }
+
+    if (!QFile::rename(filePath, newFilePath)) {
+        qWarning() << "Ошибка переименования в" << newFilePath;
+        return false;
+    }
+
+    qDebug() << "Файл переименован в:" << newFilePath;
+    return true;
+}
+
+bool NetworkInteraction::deleteFile(const QString &filePath)
+{
+    if (QFile::exists(filePath)) {
+        if (QFile::remove(filePath)) {
+            qDebug() << "Файл удалён:" << filePath;
+            return true;
+        } else {
+            qDebug() << "Не удалось удалить файл:" << filePath;
+        }
+    } else {
+        qDebug() << "Файл не найден:" << filePath;
+    }
+    return false;
+}
+
 void NetworkInteraction::sendStudents()
 {
     auto url = api("students");
 }
 
-void NetworkInteraction::sendTables()
+void NetworkInteraction::sendTable(const QString& file_name)
 {
-    auto url = api("attendance");
+    auto url = api(QString("attendance/%1").arg(file_name));
+    QNetworkRequest request = this->request(url);
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/octet-stream");
+    QString filename = QString("attendance/outbox/%1").arg(file_name);
+
+    QFile file(filename);
+    if (!file.open(QIODevice::ReadOnly)) {
+        qWarning() << "Cannot open file " << file_name;
+        emit appendLog(tr("Cannot open file %1 !").arg(file_name));
+        return;
+    }
+
+    // Отправка PUT-запроса
+    QNetworkReply *reply = manager->put(request, &file);
+    QString response = syncReply(reply);
+    // syncReply блокирует; важно не грохнуть объект file до того, как запрос отработал до конца
+    qDebug() << "response = " << response;
+
+    if (response == "OK")
+    {
+        emit appendLog(tr("\t- file sent"));
+        if (!renameToBak(filename))
+        {
+            // не удалось переименовать в .bak - просто удаляем
+            if (deleteFile(filename))
+            {
+                emit appendLog(tr("\t- file deleted"));
+            } else
+            {
+                emit appendLog(tr("\t- Cannot delete the file!!"));
+            }
+        }
+    }
+}
+
+void NetworkInteraction::sendTables(const QStringList& files)
+{
+    ProtocolDialog* progress = createProgress(tr("Sending new blanks to the servers"));
+    progress->progress_max(files.size());
+    int i = 0;
+    for (const auto &file : files) {
+        qDebug() << file;
+        progress->appendLog(file); // emit appendLog(file);
+        sendTable(file);
+        progress->progress(++i);
+
+        // Обновить GUI
+        QApplication::processEvents(); // QCoreApplication::processEvents();
+        // или QCoreApplication::processEvents(QEventLoop::AllEvents, 5);
+    }
 }
 
 void NetworkInteraction::receiveTables()
@@ -176,7 +273,30 @@ void NetworkInteraction::deleteTables(const QStringList& ids)
     auto url = api("attendance");
 }
 
+ProtocolDialog* NetworkInteraction::createProgress(const QString& title)
+{
+    MainWindow* mainWindow = nullptr;
+    QWidgetList topLevelWidgets = QApplication::topLevelWidgets();
+    for (QWidget* widget : topLevelWidgets) {
+        // Check if the widget is a QMainWindow and cast it
+        mainWindow = qobject_cast<MainWindow*>(widget);
+        if (mainWindow) {
+            break;
+        }
+    }
 
+    auto dialog = new ProtocolDialog(title, mainWindow);
+    dialog->show();
+    if (mainWindow)
+    {
+        connect(mainWindow->network, &NetworkInteraction::appendLog, dialog, &ProtocolDialog::appendLog);
+    }
+    QThread* thread = new QThread(dialog);
+    dialog->moveToThread(thread);
+    thread->start();
+
+    return dialog;
+}
 
 
 

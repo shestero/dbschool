@@ -59,7 +59,8 @@ add_executable(dbschool1 main.cpp
         NetworkInteraction.cpp
         NetworkInteraction.h
         ProtocolDialog.cpp
-        ProtocolDialog.h)
+        ProtocolDialog.h
+        Worker.h)
 
 include(FetchContent)
 #FetchContent_Declare(

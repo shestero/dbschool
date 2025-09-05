@@ -5,10 +5,12 @@
 #ifndef DBSCHOOL1_NETWORKINTERACTION_H
 #define DBSCHOOL1_NETWORKINTERACTION_H
 
-#include <QWidget>
 #include <QNetworkAccessManager>
 #include <QNetworkRequest>
 #include <QNetworkReply>
+#include <QObject>
+
+#include "ProtocolDialog.h"
 
 class NetworkInteraction: public QObject
 {
@@ -24,12 +26,15 @@ public:
 
     QString getStudentsHash();
     void sendStudents();
-    void sendTables();
+    void sendTable(const QString& file_name);
+    void sendTables(const QStringList& files);
     void receiveTables();
     void deleteTables(const QStringList& ids);
 
-
 private:
+    bool renameToBak(const QString& file_info);
+    bool deleteFile(const QString &filePath);
+
     void startRequest(const QUrl &url);
 
 private slots:
@@ -38,6 +43,11 @@ private slots:
 
 private:
     QNetworkAccessManager *manager;
+
+    ProtocolDialog* createProgress(const QString& title);
+
+signals:
+    void appendLog(const QString& line);
 };
 
 

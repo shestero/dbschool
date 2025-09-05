@@ -32,7 +32,7 @@
 static LastAttendanceDate gl_lastAttendanceDate = LastAttendanceDate(LASTDATE_FILENAME);
 
 MainWindow::MainWindow(QWidget *parent) :
-    QMainWindow(parent), network_interaction(new NetworkInteraction(this))
+    QMainWindow(parent), network(new NetworkInteraction(this))
 {
     setWindowTitle(tr("School accounting"));
 
@@ -141,10 +141,7 @@ void MainWindow::onSendAttendanceTables()
         return;
     }
 
-    QMessageBox::critical(
-        this,
-        tr("Sending attendance tables"),
-        tr("Under construction"));
+    network->sendTables(files);
 }
 
 void MainWindow::onReceiveAttendanceTables()
@@ -185,7 +182,7 @@ void MainWindow::onRefreshStudentTable()
     if (hash_local.isEmpty())
         return;
 
-    const QString hash_remote = network_interaction->getStudentsHash();
+    const QString hash_remote = network->getStudentsHash();
     qDebug() << "hash_local" << hash_local << "hash_remote=" << hash_remote;
     if (hash_remote.isEmpty())
     {

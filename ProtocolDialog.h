@@ -15,6 +15,16 @@ class ProtocolDialog : public QDialog {
 public:
     ProtocolDialog(const QString& title, QWidget *parent = nullptr);
 
+    void progress_max(int max)
+    {
+        progressBar->setMaximum(max);
+    }
+
+    void progress(int p)
+    {
+        progressBar->setValue(p);
+    }
+
 public slots:
     void appendLog(const QString& line) {
         textEdit->append(line);
