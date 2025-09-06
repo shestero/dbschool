@@ -160,6 +160,18 @@
         <source>File name %1 considered bad; it&apos;s skipped!</source>
         <translation>Имя файла %1 не валидно; он не будет обработан!</translation>
     </message>
+    <message>
+        <source>Cannot read the file list from server</source>
+        <translation>Не получается прочитать список файлов с сервера!</translation>
+    </message>
+    <message>
+        <source>Receiving the attendance tables</source>
+        <translation>Приём списка таблиц посещаемости</translation>
+    </message>
+    <message>
+        <source>No filled files for load</source>
+        <translation>Нет заполненных таблиц для скачки!</translation>
+    </message>
 </context>
 <context>
     <name>ProtocolDialog</name>

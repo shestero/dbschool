@@ -10,10 +10,11 @@
 
 #include <QApplication>
 #include <QAuthenticator>
+#include <QEventLoop>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QObject>
-#include <QEventLoop>
+#include <QMessageBox>
 #include <QNetworkAccessManager>
 
 #include <QDebug>
@@ -278,16 +279,50 @@ bool badFileName(const QString& file) {
     return false;
 }
 
+MainWindow* mainWindow()
+{
+    MainWindow* mainWindow = nullptr;
+    QWidgetList topLevelWidgets = QApplication::topLevelWidgets();
+    for (QWidget* widget : topLevelWidgets) {
+        // Check if the widget is a QMainWindow and cast it
+        mainWindow = qobject_cast<MainWindow*>(widget);
+        if (mainWindow) {
+            break;
+        }
+    }
+    return mainWindow;
+}
+
 void NetworkInteraction::receiveTables()
 {
-    ProtocolDialog* dialog = createProgress(tr("Receiving filled blanks"));
-
     auto url = api("attendances/outbox");
     auto request = this->request(url);
+    QGuiApplication::setOverrideCursor(Qt::WaitCursor);
     QNetworkReply *reply = manager->get(request);
     QString response = syncReply(reply);
-    QJsonDocument jsonDocument = QJsonDocument::fromJson(response.toUtf8());
+    QGuiApplication::restoreOverrideCursor();
+    if (response.isEmpty())
+    {
+        qWarning() << "Empty response";
+        QMessageBox::critical(
+            mainWindow(),
+            tr("Receiving the attendance tables"),
+            tr("Cannot read the file list from server"));
+        return;
+    }
 
+    QJsonDocument jsonDocument = QJsonDocument::fromJson(response.toUtf8());
+    if (jsonDocument.array().isEmpty())
+    {
+        qWarning() << "Empty array response";
+        QMessageBox::critical(
+            mainWindow(),
+            tr("Receiving the attendance tables"),
+            tr("No filled files for load"));
+        return;
+    }
+
+    ProtocolDialog* dialog = createProgress(tr("Receiving filled blanks"));
     dialog->progress_max(jsonDocument.array().size());
 
     int i = 0;
@@ -342,21 +377,12 @@ void NetworkInteraction::deleteTables(const QStringList& ids)
 
 ProtocolDialog* NetworkInteraction::createProgress(const QString& title)
 {
-    MainWindow* mainWindow = nullptr;
-    QWidgetList topLevelWidgets = QApplication::topLevelWidgets();
-    for (QWidget* widget : topLevelWidgets) {
-        // Check if the widget is a QMainWindow and cast it
-        mainWindow = qobject_cast<MainWindow*>(widget);
-        if (mainWindow) {
-            break;
-        }
-    }
-
-    auto dialog = new ProtocolDialog(title, mainWindow);
+    MainWindow* parent = mainWindow();
+    auto dialog = new ProtocolDialog(title, parent);
     dialog->show();
-    if (mainWindow)
+    if (parent)
     {
-        connect(mainWindow->network, &NetworkInteraction::appendLog, dialog, &ProtocolDialog::appendLog);
+        connect(parent->network, &NetworkInteraction::appendLog, dialog, &ProtocolDialog::appendLog);
     }
     QThread* thread = new QThread(dialog);
     dialog->moveToThread(thread);
