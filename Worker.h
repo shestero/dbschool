@@ -9,7 +9,6 @@
 #include <QDebug>
 #include <QThread>
 #include <functional>
-#include <qt5/QtCore/qobject.h>
 
 class Worker : public QObject {
     Q_OBJECT

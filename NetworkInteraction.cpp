@@ -336,6 +336,8 @@ void NetworkInteraction::receiveTables()
 void NetworkInteraction::deleteTables(const QStringList& ids)
 {
     auto url = api("attendance");
+
+    // TODO
 }
 
 ProtocolDialog* NetworkInteraction::createProgress(const QString& title)
