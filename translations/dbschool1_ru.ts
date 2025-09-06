@@ -7,10 +7,6 @@
         <source>Issue invoices</source>
         <translation>Выставить счета</translation>
     </message>
-    <message>
-        <source>GenerateInvoices</source>
-        <translation type="unfinished"></translation>
-    </message>
 </context>
 <context>
     <name>GenerateTables</name>
@@ -95,7 +91,7 @@
     </message>
     <message>
         <source>Receiving attendance tables</source>
-        <translation>Сбор заполненных бланков</translation>
+        <translation type="vanished">Сбор заполненных бланков</translation>
     </message>
     <message>
         <source>Issue invoices</source>
@@ -148,6 +144,22 @@
         <source>Sending new blanks to the servers</source>
         <translation>Отправка новых бланков посещаемости на сервер</translation>
     </message>
+    <message>
+        <source>Receiving filled blanks</source>
+        <translation>Приём заполненных бланков</translation>
+    </message>
+    <message>
+        <source>Cannot read file %1 from server!</source>
+        <translation>Не удалось прочитать содержимое файла %1 с сервера!</translation>
+    </message>
+    <message>
+        <source>Cannot save file %1!</source>
+        <translation>Не удалось сохранить файл %1!</translation>
+    </message>
+    <message>
+        <source>File name %1 considered bad; it&apos;s skipped!</source>
+        <translation>Имя файла %1 не валидно; он не будет обработан!</translation>
+    </message>
 </context>
 <context>
     <name>ProtocolDialog</name>
@@ -164,7 +176,7 @@
     </message>
     <message>
         <source>&amp;Copy</source>
-        <translation type="unfinished"></translation>
+        <translation></translation>
     </message>
 </context>
 </TS>

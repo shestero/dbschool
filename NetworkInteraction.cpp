@@ -10,6 +10,8 @@
 
 #include <QApplication>
 #include <QAuthenticator>
+#include <QJsonArray>
+#include <QJsonDocument>
 #include <QObject>
 #include <QEventLoop>
 #include <QNetworkAccessManager>
@@ -195,9 +197,8 @@ bool NetworkInteraction::deleteFile(const QString &filePath)
         if (QFile::remove(filePath)) {
             qDebug() << "Файл удалён:" << filePath;
             return true;
-        } else {
-            qDebug() << "Не удалось удалить файл:" << filePath;
         }
+        qDebug() << "Не удалось удалить файл:" << filePath;
     } else {
         qDebug() << "Файл не найден:" << filePath;
     }
@@ -263,9 +264,73 @@ void NetworkInteraction::sendTables(const QStringList& files)
     }
 }
 
+
+bool badFileName(const QString& file) {
+    int dots = 0;
+    for (QChar c : file) {
+        if (!(c.isLetterOrNumber() || c=='.' || c=='-' || c=='_')) {
+            return true;
+        }
+        if (c=='.')
+            if (++dots > 1)
+                return true;
+    }
+    return false;
+}
+
 void NetworkInteraction::receiveTables()
 {
-    auto url = api("attendance");
+    ProtocolDialog* dialog = createProgress(tr("Receiving filled blanks"));
+
+    auto url = api("attendances/outbox");
+    auto request = this->request(url);
+    QNetworkReply *reply = manager->get(request);
+    QString response = syncReply(reply);
+    QJsonDocument jsonDocument = QJsonDocument::fromJson(response.toUtf8());
+
+    dialog->progress_max(jsonDocument.array().size());
+
+    int i = 0;
+    for (const QJsonValue &item : jsonDocument.array())
+    {
+        i++;
+        if (!item.isString())
+            continue;
+
+        QString fileName = item.toString();
+        if (badFileName(fileName))
+        {
+            qWarning() << "Bad file name:" << fileName << " (skipped)";
+            dialog->appendLog(tr("File name %1 considered bad; it's skipped!").arg(fileName));
+            continue;
+        }
+
+        auto url = api(QString("attendance/outbox/") + fileName);
+        auto request = this->request(url);
+        QNetworkReply *reply = manager->get(request);
+        QString response = syncReply(reply);
+        if (response.isEmpty())
+        {
+            qWarning() << "Cannot read file" << fileName;
+            dialog->appendLog(tr("Cannot read file %1 from server!").arg(fileName));
+            continue;
+        }
+
+        QString outputName = QString("attendance/inbox/") + fileName;
+        QFile file(outputName);
+        if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+            QTextStream(&file) << response;
+            file.close();
+        } else {
+            qCritical() << "Cannot save file" << outputName;
+            dialog->appendLog(tr("Cannot save file %1!").arg(outputName));
+        }
+
+        this->deleteTables(QStringList() << fileName); // TODO: not optimal!
+
+        dialog->progress(i);
+        dialog->appendLog(fileName);
+    }
 }
 
 void NetworkInteraction::deleteTables(const QStringList& ids)

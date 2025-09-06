@@ -160,10 +160,7 @@ void MainWindow::onSendAttendanceTables()
 
 void MainWindow::onReceiveAttendanceTables()
 {
-    QMessageBox::critical(
-        this,
-        tr("Receiving attendance tables"),
-        tr("Under construction"));
+    network->receiveTables();
 }
 
 QString MainWindow::calculateSha256Hash(const QString &filePath) {
