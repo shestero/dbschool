@@ -55,15 +55,15 @@
     </message>
     <message>
         <source>toolbar</source>
-        <translation>Панель инструментов</translation>
+        <translation type="vanished">Панель инструментов</translation>
     </message>
     <message>
         <source>Send tables</source>
-        <translation>Отправить таблицы</translation>
+        <translation>Отправить пустые</translation>
     </message>
     <message>
         <source>Receive tables</source>
-        <translation>Получить таблицы</translation>
+        <translation>Получить заполненные</translation>
     </message>
     <message>
         <source>Renew students</source>
@@ -71,7 +71,7 @@
     </message>
     <message>
         <source>Generate tables</source>
-        <translation>Создать таблицы</translation>
+        <translation>Создать бланки</translation>
     </message>
     <message>
         <source>Creating attendance tables</source>
@@ -120,6 +120,30 @@
     <message>
         <source>Students table at the server is up to date</source>
         <translation>Список студентов на сервере в актуальном состоянии</translation>
+    </message>
+    <message>
+        <source>Teacher&apos;s report</source>
+        <translation>Отчёт по учителям</translation>
+    </message>
+    <message>
+        <source>Director&apos;s report</source>
+        <translation>Отчёт для директора</translation>
+    </message>
+    <message>
+        <source>Attendance tools</source>
+        <translation>Посещаемость</translation>
+    </message>
+    <message>
+        <source>Report tools</source>
+        <translation>Отчёты</translation>
+    </message>
+    <message>
+        <source>Attendance:</source>
+        <translation>Посещаемость:</translation>
+    </message>
+    <message>
+        <source>Reports:</source>
+        <translation>Отчёты:</translation>
     </message>
 </context>
 <context>

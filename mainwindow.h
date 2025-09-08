@@ -6,6 +6,7 @@
 #define MAINWINDOW_H
 
 #include <QAction>
+#include <QCalendarWidget>
 #include <QMainWindow>
 #include <QTableWidget>
 
@@ -27,6 +28,8 @@ public slots:
     void onReceiveAttendanceTables();
     void onRefreshStudentTable();
     void onIssueInvoices();
+    void onReportForTeacher();
+    void onReportForDirector();
     void onRegularChecks();
 
 signals:
@@ -37,6 +40,8 @@ private:
 
     NetworkInteraction* network;
     QAction* sendAction;
+
+    QCalendarWidget* reportCalendarWidget;
 };
 
 

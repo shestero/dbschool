@@ -20,7 +20,7 @@ int main(int argc, char* argv[])
     }
 
     MainWindow main;
-    main.resize(1024, 768);
+    main.resize(1400, 800);
     main.show();
     return QApplication::exec();
 }

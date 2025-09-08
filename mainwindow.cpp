@@ -29,6 +29,7 @@
 #include <QFutureWatcher>
 
 #include <QDebug>
+#include <qt5/QtWidgets/qmainwindow.h>
 
 #include "ui_generatetables.h"
 
@@ -40,6 +41,7 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     setWindowTitle(tr("School accounting"));
 
+    // Tabs
     auto pTabs = new QTabWidget(this);
 
     auto pClassesModel = new CSVTableModel(this, "classes.tsv");
@@ -66,9 +68,34 @@ MainWindow::MainWindow(QWidget *parent) :
     pSections->setColumnWidth(3, 360);
     pTabs->addTab(pSections, tr("Sections"));
 
-    // Tool bar
-    auto toolBar = addToolBar(tr("toolbar")); // Adds a toolbar to the main window
-    toolBar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    // Report's calendar
+    reportCalendarWidget = new QCalendarWidget;
+    reportCalendarWidget->setMaximumSize(200, 30);
+    reportCalendarWidget->setLocale(QLocale(QLocale::Russian, QLocale::Russia));
+    reportCalendarWidget->setHorizontalHeaderFormat(QCalendarWidget::NoHorizontalHeader);
+    reportCalendarWidget->setVerticalHeaderFormat(QCalendarWidget::NoVerticalHeader);
+    reportCalendarWidget->setGridVisible(false);
+    reportCalendarWidget->setNavigationBarVisible(true);
+    reportCalendarWidget->setDateEditEnabled(true);
+    reportCalendarWidget->setStyleSheet(R"(
+        QCalendarWidget QWidget#qt_calendar_navigationbar {
+            background-color: white;       /* фон */
+        }
+        QCalendarWidget QToolButton {
+            background: transparent;       /* кнопки прозрачные */
+            color: black;                  /* цвет текста/стрелок */
+        }
+        QCalendarWidget QToolButton:hover {
+            background: lightgray;         /* фон при наведении */
+            color: black;                  /* текст остаётся чёрным */
+        }
+    )");
+    if (QTableView *table = reportCalendarWidget->findChild<QTableView*>()) { // hook
+        table->hide();
+    }
+    reportCalendarWidget->setContentsMargins(5, 0, 5, 0);
+
+    // Actions
     QAction* createAction =
         new QAction(QApplication::style()->standardIcon(QStyle::SP_FileDialogNewFolder), tr("Generate tables"), this);
     sendAction =
@@ -79,23 +106,61 @@ MainWindow::MainWindow(QWidget *parent) :
         new QAction(QApplication::style()->standardIcon(QStyle::SP_BrowserReload), tr("Renew students"), this);
     QAction* issueInvoicesAction =
         new QAction(QApplication::style()->standardIcon(QStyle::SP_FileIcon), tr("Issue invoices"), this);
+    QAction* reportForTeacher =
+        new QAction(QApplication::style()->standardIcon(QStyle::SP_DirOpenIcon), tr("Teacher's report"), this);
+    QAction* reportForDirector =
+        new QAction(QApplication::style()->standardIcon(QStyle::SP_DirOpenIcon), tr("Director's report"), this);
+
+    // Tool bars
+    QToolBar *toolBar;
+    QLabel *label;
+    toolBar = addToolBar(tr("Attendance tools"));
+    toolBar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    label = new QLabel(tr("Attendance:"));
+    label->setStyleSheet("QLabel { text-decoration: underline; padding-right: 10px; }"); // 5.14+ ?
+    // label->setContentsMargins(0, 0, 10, 0);
+    toolBar->addWidget(label);
 
     toolBar->addAction(createAction);
     toolBar->addAction(sendAction);
     toolBar->addAction(receiveAction);
     toolBar->addAction(refreshStudentAction);
+
+    addToolBarBreak();
+    toolBar = addToolBar(tr("Report tools"));
+    toolBar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
+    label = new QLabel(tr("Reports:"));
+    label->setStyleSheet("QLabel { text-decoration: underline; padding-right: 10px; }"); // 5.14+ ?
+    // label->setContentsMargins(0, 0, 10, 0);
+    toolBar->addWidget(label);
+
+    toolBar->addWidget(reportCalendarWidget);
+
+    toolBar->addAction(reportForTeacher);
+    toolBar->addAction(reportForDirector);
+    toolBar->addSeparator();
     toolBar->addAction(issueInvoicesAction);
-    toolBar->insertSeparator(issueInvoicesAction);
+    /*
+    // как выровнять влево при вертикальном режиме?
+    QToolButton* btn = qobject_cast<QToolButton*>(toolBar->widgetForAction(issueInvoicesAction));
+    if (btn) {
+        qDebug() << "found!";
+        btn->setSizePolicy(QSizePolicy::Expanding, QSizePolicy::Preferred);
+        btn->setStyleSheet("QToolButton { text-align: left; }");
+    }
+    */
 
     connect(createAction, &QAction::triggered, this, &MainWindow::onCreateAttendanceTables);
     connect(sendAction, &QAction::triggered, this, &MainWindow::onSendAttendanceTables);
     connect(receiveAction, &QAction::triggered, this, &MainWindow::onReceiveAttendanceTables);
     connect(refreshStudentAction, &QAction::triggered, this, &MainWindow::onRefreshStudentTable);
+    connect(reportForTeacher, &QAction::triggered, this, &MainWindow::onReportForTeacher);
+    connect(reportForDirector, &QAction::triggered, this, &MainWindow::onReportForDirector);
     connect(issueInvoicesAction, &QAction::triggered, this, &MainWindow::onIssueInvoices);
 
+    // Top layout
     auto centralWidget = new QWidget();
     auto verticalLayout = new QVBoxLayout(centralWidget);
-    verticalLayout->addWidget(toolBar);
     verticalLayout->addWidget(pTabs);
     setCentralWidget(centralWidget);
 
@@ -222,6 +287,7 @@ void MainWindow::onRefreshStudentTable()
 
 void MainWindow::onIssueInvoices()
 {
+    qDebug() << "date=" << reportCalendarWidget->selectedDate();
     GenerateInvoices* dialog = new GenerateInvoices(this);
 
     int result = dialog->exec(); // Show the dialog modally
@@ -237,6 +303,24 @@ void MainWindow::onIssueInvoices()
 
     dialog->deleteLater();
 
+}
+
+void MainWindow::onReportForTeacher()
+{
+    qDebug() << "date=" << reportCalendarWidget->selectedDate();
+    QMessageBox::critical(
+        this,
+        tr("Teacher's report"),
+        tr("Under construction"));
+}
+
+void MainWindow::onReportForDirector()
+{
+    qDebug() << "date=" << reportCalendarWidget->selectedDate();
+    QMessageBox::critical(
+        this,
+        tr("Director's report"),
+        tr("Under construction"));
 }
 
 void MainWindow::onRegularChecks() {
