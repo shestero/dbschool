@@ -1,5 +1,6 @@
 #include "ProtocolDialog.h"
 
+#include <QFontDatabase>
 #include <QVBoxLayout>
 
 ProtocolDialog::ProtocolDialog(const QString& title, QWidget *parent)
@@ -12,7 +13,10 @@ ProtocolDialog::ProtocolDialog(const QString& title, QWidget *parent)
     layout->addWidget(textEdit = new QTextEdit(this));
     layout->addWidget(progressBar = new QProgressBar(this));
 
+    textEdit->setFont(QFontDatabase::systemFont(QFontDatabase::FixedFont));
     textEdit->setReadOnly(true);
 
-    resize(500, 300);
+    writeTimestamp();
+
+    resize(640, 400);
 }

@@ -7,6 +7,8 @@ using namespace std;
 
 const char* Configuration::config_file_name = "dbschool.toml";
 
+const char* Configuration::students_file = "students.tsv";
+
 Configuration::Configuration()
 {
     try

@@ -4,6 +4,7 @@
 
 #include "NetworkInteraction.h"
 
+#include "Attendance.h"
 #include "Configuration.h"
 #include "ProtocolDialog.h"
 #include "mainwindow.h"
@@ -21,10 +22,11 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QThread>
+#include <qt5/QtNetwork/qnetworkaccessmanager.h>
 
 #include "Worker.h"
 
-NetworkInteraction::NetworkInteraction(QObject* parent):
+NetworkInteraction::NetworkInteraction(QObject* parent) :
     QObject(parent),
     manager(new QNetworkAccessManager(parent))
 {
@@ -33,7 +35,7 @@ NetworkInteraction::NetworkInteraction(QObject* parent):
     //connect(manager, &QNetworkAccessManager::finished, this, &NetworkInteraction::handleFinished);
 }
 
-void NetworkInteraction::handleAuthentication(QNetworkReply *reply, QAuthenticator *authenticator)
+void NetworkInteraction::handleAuthentication(QNetworkReply* reply, QAuthenticator* authenticator)
 {
     Q_UNUSED(reply);
     qDebug() << "Authentication required for" << authenticator->realm();
@@ -41,11 +43,14 @@ void NetworkInteraction::handleAuthentication(QNetworkReply *reply, QAuthenticat
     authenticator->setPassword("password");
 }
 
-void NetworkInteraction::handleFinished(QNetworkReply *reply)
+void NetworkInteraction::handleFinished(QNetworkReply* reply)
 {
-    if (reply->error() == QNetworkReply::NoError) {
+    if (reply->error() == QNetworkReply::NoError)
+    {
         qDebug() << "Success:" << reply->readAll();
-    } else {
+    }
+    else
+    {
         qDebug() << "Error:" << reply->errorString();
     }
     //reply->deleteLater();
@@ -76,19 +81,24 @@ QNetworkRequest NetworkInteraction::request(const QUrl& url)
 #include <QFutureInterface>
 #include <QFutureWatcher>
 
-QFuture<QString> replyToFuture(QNetworkReply *reply) {
+QFuture<QString> replyToFuture(QNetworkReply* reply)
+{
     QFutureInterface<QString> iface;
     iface.reportStarted();
 
-    QObject::connect(reply, &QNetworkReply::finished, [reply, iface]() mutable {
-        if (reply->error() == QNetworkReply::NoError) {
+    QObject::connect(reply, &QNetworkReply::finished, [reply, iface]() mutable
+    {
+        if (reply->error() == QNetworkReply::NoError)
+        {
             qDebug() << "reply size = " << reply->size();
             QByteArray data = reply->readAll();
             qDebug() << "data size = " << data.size();
             const QString result = QString(data.toStdString().c_str());
             qDebug() << "from replyToFuture:" << result;
             iface.reportResult(result);
-        } else {
+        }
+        else
+        {
             // Можно завести QFuture<QByteArray, QNetworkReply::NetworkError> и т.д.
             // либо сигнализировать об ошибке кастомно
             qDebug() << "Network error:" << reply->errorString();
@@ -107,7 +117,8 @@ QString NetworkInteraction::syncReply(QNetworkReply* reply)
     connect(reply, &QNetworkReply::finished, &loop, &QEventLoop::quit);
     loop.exec(); // This line waits for the reply to finish
 
-    if (reply->error() != QNetworkReply::NoError) {
+    if (reply->error() != QNetworkReply::NoError)
+    {
         qDebug() << "Error:" << reply->errorString();
         reply->deleteLater(); // Clean up the reply object
         return {};
@@ -116,10 +127,10 @@ QString NetworkInteraction::syncReply(QNetworkReply* reply)
     QByteArray data = reply->readAll();
     qDebug() << "Data received:" << data;
     reply->deleteLater(); // Clean up the reply object
-    return {data.toStdString().c_str() };
+    return {data.toStdString().c_str()};
 }
 
-void NetworkInteraction::startRequest(const QUrl &url)
+void NetworkInteraction::startRequest(const QUrl& url)
 {
     QNetworkRequest request = this->request(url);
     QNetworkReply* reply = manager->get(request);
@@ -141,8 +152,10 @@ void NetworkInteraction::startRequest(const QUrl &url)
 
     QFuture<QString> fut = replyToFuture(reply);
 
-    QFutureWatcher<QString> *watcher = new QFutureWatcher<QString>(this); // 'this' is the parent object for memory management
-    connect(watcher, &QFutureWatcher<QString>::finished, [watcher]() {
+    QFutureWatcher<QString>* watcher = new QFutureWatcher<QString>(this);
+    // 'this' is the parent object for memory management
+    connect(watcher, &QFutureWatcher<QString>::finished, [watcher]()
+    {
         // Code to execute when the future finishes
         auto result = watcher->result();
         qDebug() << "from future: " << result;
@@ -168,10 +181,42 @@ QString NetworkInteraction::getStudentsHash()
     return hash;
 }
 
-bool NetworkInteraction::renameToBak(const QString &filePath)
+
+bool NetworkInteraction::sendStudents()
+{
+    QFile file(Configuration::students_file);
+    if (!file.open(QIODevice::ReadOnly))
+    {
+        qWarning() << "Cannot open file " << Configuration::students_file;
+        emit appendLog(tr("Cannot open file %1 !").arg(Configuration::students_file));
+        return false;
+    }
+
+    // Отправка PUT-запроса
+    auto url = api("students");
+    QNetworkRequest request = this->request(url);
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/octet-stream");
+    QNetworkReply* reply = manager->put(request, &file);
+    QString response = syncReply(reply);
+    // syncReply блокирует; важно не грохнуть объект file до того, как запрос отработал до конца
+    qDebug() << "response = " << response;
+
+    if (response == "OK")
+    {
+        emit appendLog(tr("%1 was successfully sent").arg(Configuration::students_file));
+        return true;
+    } else
+    {
+        emit appendLog(tr("Unable to send %1: %2").arg(Configuration::students_file).arg(response));
+        return false;
+    }
+}
+
+bool NetworkInteraction::renameToBak(const QString& filePath)
 {
     QFileInfo info(filePath);
-    if (!info.exists() || !info.isFile()) {
+    if (!info.exists() || !info.isFile())
+    {
         qWarning() << "Файл не существует:" << filePath;
         return false;
     }
@@ -179,11 +224,13 @@ bool NetworkInteraction::renameToBak(const QString &filePath)
     // Новый путь с тем же именем, но расширением .bak
     QString newFilePath = info.path() + "/" + info.completeBaseName() + ".bak";
 
-    if (QFile::exists(newFilePath)) {
-        QFile::remove(newFilePath);  // если уже есть .bak — удаляем
+    if (QFile::exists(newFilePath))
+    {
+        QFile::remove(newFilePath); // если уже есть .bak — удаляем
     }
 
-    if (!QFile::rename(filePath, newFilePath)) {
+    if (!QFile::rename(filePath, newFilePath))
+    {
         qWarning() << "Ошибка переименования в" << newFilePath;
         return false;
     }
@@ -192,41 +239,41 @@ bool NetworkInteraction::renameToBak(const QString &filePath)
     return true;
 }
 
-bool NetworkInteraction::deleteFile(const QString &filePath)
+bool NetworkInteraction::deleteFile(const QString& filePath)
 {
-    if (QFile::exists(filePath)) {
-        if (QFile::remove(filePath)) {
+    if (QFile::exists(filePath))
+    {
+        if (QFile::remove(filePath))
+        {
             qDebug() << "Файл удалён:" << filePath;
             return true;
         }
         qDebug() << "Не удалось удалить файл:" << filePath;
-    } else {
+    }
+    else
+    {
         qDebug() << "Файл не найден:" << filePath;
     }
     return false;
 }
 
-void NetworkInteraction::sendStudents()
-{
-    auto url = api("students");
-}
-
 void NetworkInteraction::sendTable(const QString& file_name)
 {
     auto url = api(QString("attendance/%1").arg(file_name));
-    QNetworkRequest request = this->request(url);
-    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/octet-stream");
     QString filename = QString("attendance/outbox/%1").arg(file_name);
 
     QFile file(filename);
-    if (!file.open(QIODevice::ReadOnly)) {
+    if (!file.open(QIODevice::ReadOnly))
+    {
         qWarning() << "Cannot open file " << file_name;
         emit appendLog(tr("Cannot open file %1 !").arg(file_name));
         return;
     }
 
     // Отправка PUT-запроса
-    QNetworkReply *reply = manager->put(request, &file);
+    QNetworkRequest request = this->request(url);
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/octet-stream");
+    QNetworkReply* reply = manager->put(request, &file);
     QString response = syncReply(reply);
     // syncReply блокирует; важно не грохнуть объект file до того, как запрос отработал до конца
     qDebug() << "response = " << response;
@@ -240,7 +287,8 @@ void NetworkInteraction::sendTable(const QString& file_name)
             if (deleteFile(filename))
             {
                 emit appendLog(tr("\t- file deleted"));
-            } else
+            }
+            else
             {
                 emit appendLog(tr("\t- Cannot delete the file!!"));
             }
@@ -253,9 +301,10 @@ void NetworkInteraction::sendTables(const QStringList& files)
     ProtocolDialog* progress = createProgress(tr("Sending new blanks to the servers"));
     progress->progress_max(files.size());
     int i = 0;
-    for (const auto &file : files) {
+    for (const QString& file : files)
+    {
         qDebug() << file;
-        progress->appendLog(file); // emit appendLog(file);
+        emit appendLog(file);
         sendTable(file);
         progress->progress(++i);
 
@@ -266,13 +315,16 @@ void NetworkInteraction::sendTables(const QStringList& files)
 }
 
 
-bool badFileName(const QString& file) {
+bool badFileName(const QString& file)
+{
     int dots = 0;
-    for (QChar c : file) {
-        if (!(c.isLetterOrNumber() || c=='.' || c=='-' || c=='_')) {
+    for (QChar c : file)
+    {
+        if (!(c.isLetterOrNumber() || c == '.' || c == '-' || c == '_'))
+        {
             return true;
         }
-        if (c=='.')
+        if (c == '.')
             if (++dots > 1)
                 return true;
     }
@@ -283,10 +335,12 @@ MainWindow* mainWindow()
 {
     MainWindow* mainWindow = nullptr;
     QWidgetList topLevelWidgets = QApplication::topLevelWidgets();
-    for (QWidget* widget : topLevelWidgets) {
+    for (QWidget* widget : topLevelWidgets)
+    {
         // Check if the widget is a QMainWindow and cast it
         mainWindow = qobject_cast<MainWindow*>(widget);
-        if (mainWindow) {
+        if (mainWindow)
+        {
             break;
         }
     }
@@ -298,7 +352,7 @@ void NetworkInteraction::receiveTables()
     auto url = api("attendances/outbox");
     auto request = this->request(url);
     QGuiApplication::setOverrideCursor(Qt::WaitCursor);
-    QNetworkReply *reply = manager->get(request);
+    QNetworkReply* reply = manager->get(request);
     QString response = syncReply(reply);
     QGuiApplication::restoreOverrideCursor();
     if (response.isEmpty())
@@ -315,6 +369,7 @@ void NetworkInteraction::receiveTables()
     if (jsonDocument.array().isEmpty())
     {
         qWarning() << "Empty array response";
+        emit appendLog(tr("Nothing to receive!"));
         QMessageBox::critical(
             mainWindow(),
             tr("Receiving the attendance tables"),
@@ -326,7 +381,7 @@ void NetworkInteraction::receiveTables()
     dialog->progress_max(jsonDocument.array().size());
 
     int i = 0;
-    for (const QJsonValue &item : jsonDocument.array())
+    for (const QJsonValue& item : jsonDocument.array())
     {
         i++;
         if (!item.isString())
@@ -336,43 +391,82 @@ void NetworkInteraction::receiveTables()
         if (badFileName(fileName))
         {
             qWarning() << "Bad file name:" << fileName << " (skipped)";
-            dialog->appendLog(tr("File name %1 considered bad; it's skipped!").arg(fileName));
+            emit appendLog(tr("File name %1 considered bad; it's skipped!").arg(fileName));
             continue;
         }
 
         auto url = api(QString("attendance/outbox/") + fileName);
         auto request = this->request(url);
-        QNetworkReply *reply = manager->get(request);
+        QNetworkReply* reply = manager->get(request);
         QString response = syncReply(reply);
         if (response.isEmpty())
         {
             qWarning() << "Cannot read file" << fileName;
-            dialog->appendLog(tr("Cannot read file %1 from server!").arg(fileName));
+            emit appendLog(tr("Cannot read file %1 from server!").arg(fileName));
             continue;
         }
 
         QString outputName = QString("attendance/inbox/") + fileName;
         QFile file(outputName);
-        if (file.open(QIODevice::WriteOnly | QIODevice::Text)) {
+        if (file.open(QIODevice::WriteOnly | QIODevice::Text))
+        {
             QTextStream(&file) << response;
             file.close();
-        } else {
+
+            // File is saved. Check it
+            Attendance* attendance = nullptr;
+            try
+            {
+                attendance = new Attendance(outputName);
+                emit appendLog(tr("Got table of class '%1' (%2 - %3)")
+                                  .arg(attendance->ss_name)
+                                  .arg(attendance->date_min.toString("dd.MM.yyyy"))
+                                  .arg(attendance->date_max.toString("dd.MM.yyyy"))
+                );
+            }
+            catch (...)
+            {
+                qWarning() << "Cannot validate file " << outputName;
+                emit appendLog(tr("Cannot validate file %1!").arg(outputName));
+            }
+
+            if (attendance != nullptr) {
+                auto deleted = deleteTables(QStringList() << fileName); // TODO: not optimal!
+                if (deleted.isEmpty())
+                {
+                    emit appendLog(tr("Cannot delete file %1 from server!").arg(fileName));
+                }
+            }
+        }
+        else
+        {
             qCritical() << "Cannot save file" << outputName;
-            dialog->appendLog(tr("Cannot save file %1!").arg(outputName));
+            emit appendLog(tr("Cannot save file %1!").arg(outputName));
         }
 
-        this->deleteTables(QStringList() << fileName); // TODO: not optimal!
 
         dialog->progress(i);
-        dialog->appendLog(fileName);
+        emit appendLog(fileName);
     }
 }
 
-void NetworkInteraction::deleteTables(const QStringList& ids)
+QStringList NetworkInteraction::deleteTables(const QStringList& ids)
 {
-    auto url = api("attendance");
-
-    // TODO
+    QStringList ret;
+    foreach(const QString& fileName, ids) {
+        auto url = api(QString("attendance/outbox/") + fileName);
+        auto request = this->request(url);
+        QNetworkReply* reply = manager->deleteResource(request);
+        QString response = syncReply(reply);
+        if (response == "OK")
+        {
+            ret << fileName;
+        } else
+        {
+            qWarning() << "Cannot read file" << fileName << " response:" << response;
+        }
+    }
+    return ret;
 }
 
 ProtocolDialog* NetworkInteraction::createProgress(const QString& title)
@@ -390,7 +484,3 @@ ProtocolDialog* NetworkInteraction::createProgress(const QString& title)
 
     return dialog;
 }
-
-
-
-

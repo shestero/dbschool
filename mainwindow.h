@@ -11,6 +11,7 @@
 #include <QTableWidget>
 
 #include "NetworkInteraction.h"
+#include "ProtocolWidget.h"
 
 
 class MainWindow : public QMainWindow
@@ -42,6 +43,8 @@ private:
     QAction* sendAction;
 
     QCalendarWidget* reportCalendarWidget;
+    ProtocolWidget* logger;
+    //QStatusBar* statusBar;
 };
 
 

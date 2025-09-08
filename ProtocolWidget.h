@@ -1,23 +1,28 @@
 //
-// Created by shestero on 8/30/25.
+// Created by shestero on 9/8/25.
 //
 
-#ifndef DBSCHOOL1_PROTOCOLDIALOG_H
-#define DBSCHOOL1_PROTOCOLDIALOG_H
+#ifndef DBSCHOOL1_QPROTOCOLWIDGET_H
+#define DBSCHOOL1_QPROTOCOLWIDGET_H
 
+#include <QApplication>
+#include <QClipboard>
 #include <QDateTime>
-#include <QDialog>
 #include <QProgressBar>
-#include <QPushButton>
 #include <QTextEdit>
+#include <QWidget>
 
 
-class ProtocolDialog : public QDialog
+
+class ProtocolWidget : public QWidget
 {
     Q_OBJECT
 
 public:
-    ProtocolDialog(const QString& title, QWidget* parent = nullptr);
+    explicit ProtocolWidget(QWidget* parent = nullptr);
+    ~ProtocolWidget() override;
+
+public slots:
 
     void progress_max(int max)
     {
@@ -29,7 +34,6 @@ public:
         progressBar->setValue(p);
     }
 
-public slots:
     void appendLog(const QString& line)
     {
         textEdit->append(line);
@@ -45,9 +49,20 @@ public slots:
         );
     }
 
+    void onCopy()
+    {
+        QApplication::clipboard()->setText(textEdit->toPlainText()); // обычный текст
+    }
+
+    void onClear()
+    {
+        textEdit->clear();
+    }
+
 private:
     QTextEdit* textEdit;
     QProgressBar* progressBar;
 };
 
-#endif //DBSCHOOL1_PROTOCOLDIALOG_H
+
+#endif //DBSCHOOL1_QPROTOCOLWIDGET_H

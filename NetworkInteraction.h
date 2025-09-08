@@ -25,11 +25,12 @@ public:
     QString syncReply(QNetworkReply* reply);
 
     QString getStudentsHash();
-    void sendStudents();
+    bool sendStudents();
+
     void sendTable(const QString& file_name);
     void sendTables(const QStringList& files);
     void receiveTables();
-    void deleteTables(const QStringList& ids);
+    QStringList deleteTables(const QStringList& ids);
 
 private:
     bool renameToBak(const QString& file_info);

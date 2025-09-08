@@ -67,6 +67,10 @@ add_executable(dbschool1
         generateinvoices.cpp
         generateinvoices.h
         generateinvoices.ui
+        Attendance.cpp
+        Attendance.h
+        ProtocolWidget.cpp
+        ProtocolWidget.h
 )
 
 include(FetchContent)

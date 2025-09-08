@@ -67,7 +67,7 @@
     </message>
     <message>
         <source>Renew students</source>
-        <translation>Обновить список студентов</translation>
+        <translation>Обновить список учеников</translation>
     </message>
     <message>
         <source>Generate tables</source>
@@ -145,6 +145,26 @@
         <source>Reports:</source>
         <translation>Отчёты:</translation>
     </message>
+    <message>
+        <source>Ready...</source>
+        <translation>Готов...</translation>
+    </message>
+    <message>
+        <source>Renew %1</source>
+        <translation>Обновление %1</translation>
+    </message>
+    <message>
+        <source>Unknown problem...</source>
+        <translation>Обнаружена проблема...</translation>
+    </message>
+    <message>
+        <source>The file is up to date</source>
+        <translation>Файл на сервере в актуальном состоянии</translation>
+    </message>
+    <message>
+        <source>Success</source>
+        <translation>Успешно!</translation>
+    </message>
 </context>
 <context>
     <name>NetworkInteraction</name>
@@ -196,12 +216,55 @@
         <source>No filled files for load</source>
         <translation>Нет заполненных таблиц для скачки!</translation>
     </message>
+    <message>
+        <source>Got table of class &apos;%1&apos; (%2 - %3)</source>
+        <translation>Получен заполненный бланк кружка &lt;b&gt;%1&lt;/b&gt; (за %2 - %3)</translation>
+    </message>
+    <message>
+        <source>Cannot validate file %1!</source>
+        <translation>Не валидируется содержимое %1!</translation>
+    </message>
+    <message>
+        <source>Cannot delete file %1 from server!</source>
+        <translation>Файл %1 не удаляется на сервере!</translation>
+    </message>
+    <message>
+        <source>%1 was successfully sent</source>
+        <translation>%1 успешно отправлен</translation>
+    </message>
+    <message>
+        <source>Unable to send %1: %2</source>
+        <translation>Не могу отправить %1: %2</translation>
+    </message>
+    <message>
+        <source>Nothing to receive!</source>
+        <translation>Нет заполненных бланков для приёма</translation>
+    </message>
 </context>
 <context>
     <name>ProtocolDialog</name>
     <message>
         <source>Execution: %1</source>
         <translation>Выполнение: %1</translation>
+    </message>
+</context>
+<context>
+    <name>ProtocolWidget</name>
+    <message>
+        <source>Log:</source>
+        <translation>Протокол работы:</translation>
+    </message>
+    <message>
+        <source>Copy</source>
+        <translation>Копировать</translation>
+    </message>
+    <message>
+        <source>Clear</source>
+        <translation>Очистить</translation>
+    </message>
+    <message>
+        <source>Program started</source>
+        <translation>Программа старовала</translation>
     </message>
 </context>
 <context>

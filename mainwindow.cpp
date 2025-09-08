@@ -18,6 +18,8 @@
 #include <QDir>
 #include <QIcon>
 #include <QMessageBox>
+#include <QSplitter>
+#include <QStatusBar>
 #include <QThread>
 #include <QToolBar>
 #include <QToolButton>
@@ -42,35 +44,35 @@ MainWindow::MainWindow(QWidget *parent) :
     setWindowTitle(tr("School accounting"));
 
     // Tabs
-    auto pTabs = new QTabWidget(this);
+    auto tabs = new QTabWidget(this);
 
     auto pClassesModel = new CSVTableModel(this, "classes.tsv");
     TableView* pClasses = new TableView(this, pClassesModel);
     pClasses->setColumnWidth(1, 300);
-    pTabs->addTab(pClasses, tr("Classes"));
+    tabs->addTab(pClasses, tr("Classes"));
 
     auto pStudentsModel = new CSVTableModel(this, "students.tsv", 2, pClassesModel);
     auto pStudents = new TableView(this, pStudentsModel);
     pStudents->setItemDelegateForColumn(2, new ForeignKeyDelegate(pClassesModel, this));
     pStudents->setColumnWidth(1, 400);
     pStudents->setColumnWidth(2, 240);
-    pTabs->addTab(pStudents, tr("Students"));
+    tabs->addTab(pStudents, tr("Students"));
 
     auto pTeacherModel = new CSVTableModel(this, "teachers.tsv");
     TableView* pTeachers = new TableView(this, pTeacherModel);
     pTeachers->setColumnWidth(1, 400);
-    pTabs->addTab(pTeachers, tr("Teachers"));
+    tabs->addTab(pTeachers, tr("Teachers"));
 
     auto pSectionsModel = new CSVTableModel(this, "sections.tsv", 3, pTeacherModel);
     TableView* pSections = new TableView(this, pSectionsModel);
     pSections->setItemDelegateForColumn(3, new ForeignKeyDelegate(pTeacherModel, this));
     pSections->setColumnWidth(1, 400);
     pSections->setColumnWidth(3, 360);
-    pTabs->addTab(pSections, tr("Sections"));
+    tabs->addTab(pSections, tr("Sections"));
 
     // Report's calendar
     reportCalendarWidget = new QCalendarWidget;
-    reportCalendarWidget->setMaximumSize(200, 30);
+    reportCalendarWidget->setMaximumSize(220, 30);
     reportCalendarWidget->setLocale(QLocale(QLocale::Russian, QLocale::Russia));
     reportCalendarWidget->setHorizontalHeaderFormat(QCalendarWidget::NoHorizontalHeader);
     reportCalendarWidget->setVerticalHeaderFormat(QCalendarWidget::NoVerticalHeader);
@@ -158,11 +160,16 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(reportForDirector, &QAction::triggered, this, &MainWindow::onReportForDirector);
     connect(issueInvoicesAction, &QAction::triggered, this, &MainWindow::onIssueInvoices);
 
+    connect(network, &NetworkInteraction::appendLog, logger, &ProtocolWidget::appendLog);
+
     // Top layout
-    auto centralWidget = new QWidget();
-    auto verticalLayout = new QVBoxLayout(centralWidget);
-    verticalLayout->addWidget(pTabs);
-    setCentralWidget(centralWidget);
+    QSplitter* splitter = new QSplitter(Qt::Horizontal);
+    splitter->addWidget(tabs);
+    splitter->addWidget(logger = new ProtocolWidget);
+    splitter->setStretchFactor(1, 0); // правая часть не растягивается сама, но можно тянуть мышкой
+    splitter->setSizes({800, 400});
+    setCentralWidget(splitter);
+    statusBar()->setWindowTitle(tr("Ready..."));
 
     // check timer
     QTimer *checkTimer = new QTimer(this);
@@ -225,6 +232,7 @@ void MainWindow::onSendAttendanceTables()
 
 void MainWindow::onReceiveAttendanceTables()
 {
+    logger->writeTimestamp(tr("Receiving tables"));
     network->receiveTables();
 }
 
@@ -254,7 +262,7 @@ QString MainWindow::calculateSha256Hash(const QString &filePath) {
 
 void MainWindow::onRefreshStudentTable()
 {
-    const QString hash_local = calculateSha256Hash("students.tsv");
+    const QString hash_local = calculateSha256Hash(Configuration::students_file);
     if (hash_local.isEmpty())
         return;
 
@@ -262,15 +270,17 @@ void MainWindow::onRefreshStudentTable()
     qDebug() << "hash_local" << hash_local << "hash_remote=" << hash_remote;
     if (hash_remote.isEmpty())
     {
+        logger->appendLog(tr("Unknown problem..."));
         QMessageBox::critical(
             this,
             tr("Renew students table"),
             tr("Cannot get information from the server %1").arg(Configuration().teach_server.c_str())
         );
-        return;
+        // return;
     }
     if (hash_local == hash_remote)
     {
+        logger->appendLog(tr("The file is up to date"));
         QMessageBox::information(
             this,
             tr("Renew students table"),
@@ -279,10 +289,12 @@ void MainWindow::onRefreshStudentTable()
         return;
     }
 
-    QMessageBox::critical(
-        this,
-        tr("Renew students table"),
-        tr("Under construction"));
+    // Проверки прошли; действительно трубуется обновление
+    logger->writeTimestamp(tr("Renew %1").arg(Configuration::students_file));
+    if (network->sendStudents())
+    {
+        logger->appendLog(tr("Success"));
+    }
 }
 
 void MainWindow::onIssueInvoices()
