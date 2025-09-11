@@ -420,8 +420,8 @@ void NetworkInteraction::receiveTables()
                 attendance = new Attendance(outputName);
                 emit appendLog(tr("Got table of class '%1' (%2 - %3)")
                                   .arg(attendance->ss_name)
-                                  .arg(attendance->date_min.toString("dd.MM.yyyy"))
-                                  .arg(attendance->date_max.toString("dd.MM.yyyy"))
+                                  .arg(attendance->date_min.toString(Configuration::date_format))
+                                  .arg(attendance->date_max.toString(Configuration::date_format))
                 );
             }
             catch (...)

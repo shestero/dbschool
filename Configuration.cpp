@@ -9,6 +9,8 @@ const char* Configuration::config_file_name = "dbschool.toml";
 
 const char* Configuration::students_file = "students.tsv";
 
+const char* Configuration::date_format = "dd.MM.yyyy";
+
 Configuration::Configuration()
 {
     try

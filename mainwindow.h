@@ -12,6 +12,7 @@
 
 #include "NetworkInteraction.h"
 #include "ProtocolWidget.h"
+#include "toolbarcalendarwidget.h"
 
 
 class MainWindow : public QMainWindow
@@ -22,6 +23,8 @@ class MainWindow : public QMainWindow
 public:
     explicit MainWindow(QWidget* parent = nullptr);
     ~MainWindow() override;
+
+    QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>> scan(const QDate& date_start, const QDate& date_end);
 
 public slots:
     void onCreateAttendanceTables();
@@ -44,7 +47,6 @@ private:
 
     QCalendarWidget* reportCalendarWidget;
     ProtocolWidget* logger;
-    //QStatusBar* statusBar;
 };
 
 

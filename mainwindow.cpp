@@ -3,6 +3,7 @@
 //
 
 #include "mainwindow.h"
+#include "Attendance.h"
 #include "Configuration.h"
 #include "LastAttendanceDate.h"
 #include "NetworkInteraction.h"
@@ -17,6 +18,7 @@
 #include <QApplication>
 #include <QDir>
 #include <QIcon>
+#include <QLabel>
 #include <QMessageBox>
 #include <QSplitter>
 #include <QStatusBar>
@@ -31,9 +33,8 @@
 #include <QFutureWatcher>
 
 #include <QDebug>
-#include <qt5/QtWidgets/qmainwindow.h>
 
-#include "ui_generatetables.h"
+#include "Attendance.h"
 
 #define LASTDATE_FILENAME   "last-date.txt"
 static LastAttendanceDate gl_lastAttendanceDate = LastAttendanceDate(LASTDATE_FILENAME);
@@ -71,31 +72,7 @@ MainWindow::MainWindow(QWidget *parent) :
     tabs->addTab(pSections, tr("Sections"));
 
     // Report's calendar
-    reportCalendarWidget = new QCalendarWidget;
-    reportCalendarWidget->setMaximumSize(220, 30);
-    reportCalendarWidget->setLocale(QLocale(QLocale::Russian, QLocale::Russia));
-    reportCalendarWidget->setHorizontalHeaderFormat(QCalendarWidget::NoHorizontalHeader);
-    reportCalendarWidget->setVerticalHeaderFormat(QCalendarWidget::NoVerticalHeader);
-    reportCalendarWidget->setGridVisible(false);
-    reportCalendarWidget->setNavigationBarVisible(true);
-    reportCalendarWidget->setDateEditEnabled(true);
-    reportCalendarWidget->setStyleSheet(R"(
-        QCalendarWidget QWidget#qt_calendar_navigationbar {
-            background-color: white;       /* фон */
-        }
-        QCalendarWidget QToolButton {
-            background: transparent;       /* кнопки прозрачные */
-            color: black;                  /* цвет текста/стрелок */
-        }
-        QCalendarWidget QToolButton:hover {
-            background: lightgray;         /* фон при наведении */
-            color: black;                  /* текст остаётся чёрным */
-        }
-    )");
-    if (QTableView *table = reportCalendarWidget->findChild<QTableView*>()) { // hook
-        table->hide();
-    }
-    reportCalendarWidget->setContentsMargins(5, 0, 5, 0);
+    reportCalendarWidget = new ToolBarCalendarWidget;
 
     // Actions
     QAction* createAction =
@@ -137,6 +114,7 @@ MainWindow::MainWindow(QWidget *parent) :
     toolBar->addWidget(label);
 
     toolBar->addWidget(reportCalendarWidget);
+    reportCalendarWidget->setPalette(toolBar->palette());
 
     toolBar->addAction(reportForTeacher);
     toolBar->addAction(reportForDirector);
@@ -167,7 +145,7 @@ MainWindow::MainWindow(QWidget *parent) :
     splitter->addWidget(tabs);
     splitter->addWidget(logger = new ProtocolWidget);
     splitter->setStretchFactor(1, 0); // правая часть не растягивается сама, но можно тянуть мышкой
-    splitter->setSizes({800, 400});
+    splitter->setSizes({800, 600});
     setCentralWidget(splitter);
     statusBar()->setWindowTitle(tr("Ready..."));
 
@@ -180,9 +158,95 @@ MainWindow::MainWindow(QWidget *parent) :
 
 MainWindow::~MainWindow() = default;
 
+QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>> MainWindow::scan(const QDate& date_start, const QDate& date_end)
+{
+    const QStringList files =
+        QDir("attendance/inbox").entryList(QStringList() << "*.tsv", QDir::Files);
+
+    if (files.isEmpty())
+    {
+        logger->appendLog(tr("Warning: no existing attendance tables found!"));
+    }
+    logger->progress_max(files.size());
+
+    QApplication::setOverrideCursor(Qt::WaitCursor);  // курсор "ожидание"
+    QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>> acc; // ss_id => st_id  => дата => сумма
+    int i = 0;
+    for (const QString& file : files)
+    {
+        qDebug() << "file:" << file;
+        logger->progress(++i);
+        QCoreApplication::processEvents(); // обновляем окно
+
+        try
+        {
+            QString filename = QString("attendance/inbox/%1").arg(file);
+            Attendance attendance(filename);
+            qDebug() << "attendance.students.size=" << attendance.students.size();
+            for (int st_id : attendance.students.keys())
+            {
+                const QVector<QString>& av = attendance.students[st_id];
+                qDebug() << "av=" << av;
+                int j = 0;
+                const QDate minDate = std::min(attendance.date_min, date_start);
+                const QDate maxDate = std::max(attendance.date_max, date_end);
+                for (QDate d = minDate; d <= maxDate; d = d.addDays(1)) {
+                    const QString& s = av.value(++j, ""); // нулевой элемет содержит ФИО
+                    if (s.isEmpty())
+                        continue;
+                    bool ok = false;
+                    int cnt = s.toInt(&ok);
+                    if (!ok)
+                    {
+                        qDebug() << "!ok!" << s;
+                        logger->appendLog(
+                            tr("Something wrong in file %1 student %2 (%3), date %4, index=%5: s=%6")
+                                .arg(file)
+                                .arg(attendance.students[st_id].value(0, "???"))
+                                .arg(st_id)
+                                .arg(d.toString(Configuration::date_format))
+                                .arg(j)
+                                .arg(s)
+                        );
+                    }
+                    acc[attendance.ss_id].first = attendance.ss_name;
+                    acc[attendance.ss_id].second[st_id][d] += cnt;
+                }
+            }
+        } catch (...)
+        {
+            logger->appendLog(tr("Error: cannot process file %1").arg(file));
+        }
+    }
+    QApplication::restoreOverrideCursor(); // вернуть обычный курсор
+
+    return acc;
+}
+
 void MainWindow::onCreateAttendanceTables()
 {
     QDate date = gl_lastAttendanceDate.get();
+    const QDate end = QDate(date.year(), date.month(), 14);
+    QDate prevMonth = end.addMonths(-1);
+    const QDate start = QDate(prevMonth.year(), prevMonth.month(), 15);
+    const QDate searchDate = date.addDays(-3100); // Ищем учеников по курсам за последние 100 дней // TODO
+
+    logger->writeTimestamp(
+        tr("Creating tables from %1 till %2").arg(start.toString(Configuration::date_format)).arg(end.toString(Configuration::date_format))
+    );
+    logger->writeTimestamp(
+        tr("Creating tables by attendances from %1").arg(searchDate.toString(Configuration::date_format))
+    );
+
+
+    QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>> acc = scan(searchDate, QDate::currentDate());
+    qDebug() << "acc.size=" << acc.size();
+    for (auto it = acc.constBegin(); it != acc.constEnd(); ++it) {
+        qDebug() << it.key() << it.value().first << it.value().second;
+
+    }
+
+    /*
     date = date.addDays(1);
     gl_lastAttendanceDate.set(date);
 
@@ -200,6 +264,7 @@ void MainWindow::onCreateAttendanceTables()
     }
 
     dialog->deleteLater();
+    */
 }
 
 // todo

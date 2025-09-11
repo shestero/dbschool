@@ -5,6 +5,8 @@
 #ifndef DBSCHOOL1_GENERATETABLES_H
 #define DBSCHOOL1_GENERATETABLES_H
 
+// TODO: DELETE
+
 #include <QDialog>
 
 

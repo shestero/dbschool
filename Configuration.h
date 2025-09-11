@@ -19,6 +19,7 @@ public:
     static const char* config_file_name;
 
     static const char* students_file;
+    static const char* date_format;
 };
 
 

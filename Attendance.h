@@ -4,8 +4,10 @@
 
 #ifndef DBSCHOOL1_ATTENDANCE_H
 #define DBSCHOOL1_ATTENDANCE_H
-#include "LastAttendanceDate.h"
 
+#include <QDate>
+#include <QMap>
+#include <QString>
 
 class Attendance
 {
@@ -19,7 +21,7 @@ public:
     QDate date_min;
     QDate date_max;
     QDate date_filled; // Use QDate() (invalid date) as None
-    QMap<int, QPair<QString, QVector<QString>>> students;
+    QMap<int, QVector<QString>> students; // в первом элементе вектора - имя студента!
 
     Attendance(const QString& file_name);
     bool serialize(const QString& dir) const;

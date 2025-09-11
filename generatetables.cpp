@@ -9,6 +9,8 @@
 
 #include <QDialogButtonBox>
 
+// TODO: DELETE
+
 GenerateTables::GenerateTables(const QDate& start, QWidget* parent) :
     QDialog(parent), ui(new Ui::GenerateTables)
 {

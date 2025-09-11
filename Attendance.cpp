@@ -26,14 +26,13 @@ Attendance::Attendance(const QString& filePath)
     auto acc = QMap<QString, QString>();
     while (!in.atEnd()) {
         QString line = in.readLine();
-        qDebug() << "Прочитанная строка:" << line;
 
         // Разбиение с сохранением пустых полей (по умолчанию)
         QStringList withEmpty = line.split('\t');
         if (withEmpty.size() < 2)
             continue;
 
-        acc.insert(withEmpty.at(0), withEmpty.at(1));
+        acc.insert(withEmpty.at(0), line.section("\t", 1));
         // todo: save counters into separate collection
     }
 
@@ -47,6 +46,17 @@ Attendance::Attendance(const QString& filePath)
     date_min = QDate::fromString(acc["date_min"], "yyyy-MM-dd");
     date_max = QDate::fromString(acc["date_max"], "yyyy-MM-dd");
     date_filled = acc["date_filled"].isEmpty()? QDate(): QDate::fromString(acc["date_filled"], "yyyy-MM-dd");
+
+    for (const QString& s : acc.keys())
+    {
+        int st_id = s.toInt();
+        if (st_id <= 0)
+            continue;
+
+        QStringList row = acc[s].split('\t');
+        students.insert(st_id, row.toVector());
+
+    }
 
     // Закрытие файла
     file.close();
@@ -92,6 +102,10 @@ bool Attendance::serialize(const QString& dir) const
     if (date_filled.isValid())
     {
         out << "date_filled\t" << date_filled.toString("yyyy-MM-dd") << "\n";
+    }
+
+    for (auto it = students.constBegin(); it != students.constEnd(); ++it) {
+        out << it.key() << "\t" << it.value().toList().join("\t") << "\n";
     }
 
     file.close();
