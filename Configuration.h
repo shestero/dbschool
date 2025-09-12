@@ -16,8 +16,10 @@ public:
     string login;
     string password;
 
-    static const char* config_file_name;
+    // Сколько дней назад смотреть при распределении учеников по кружкам
+    long window_days;
 
+    static const char* config_file_name;
     static const char* students_file;
     static const char* date_format;
 };

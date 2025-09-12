@@ -22,7 +22,6 @@
 #include <QFile>
 #include <QFileInfo>
 #include <QThread>
-#include <qt5/QtNetwork/qnetworkaccessmanager.h>
 
 #include "Worker.h"
 

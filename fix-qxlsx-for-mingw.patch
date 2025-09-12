@@ -1,0 +1,22 @@
+--- source/xlsxdocument.cpp	2025-09-12 13:24:16.055413239 -0300
++++ source/xlsxdocument.cpp	2025-09-12 13:36:45.443676810 -0300
+@@ -524,7 +524,7 @@
+         // TODO:
+         //  (1) save as csv file name (using { mainCSVFileName + strSheetName })
+ 
+-        QString csvFileName = mainCSVFileName + u'_' + strSheetName + QLatin1String(".csv");
++        QString csvFileName = mainCSVFileName + QLatin1String("_") + strSheetName + QLatin1String(".csv");
+         QFile csvFile(csvFileName);
+         if (!csvFile.open(QIODevice::WriteOnly)) {
+             continue;
+--- source/xlsxworkbook.cpp	2025-09-12 10:19:29.295623361 -0300
++++ source/xlsxworkbook.cpp	2025-09-12 13:35:04.858048759 -0300
+@@ -617,7 +617,7 @@
+                     // const QString fullPath = QDir::cleanPath(splitPath(strFilePath).constFirst()
+                     // + QLatin1String("/") + relationship.target);
+                     const auto parts = splitPath(strFilePath);
+-                    QString fullPath = QDir::cleanPath(parts.first() + u'/' + relationship.target);
++                    QString fullPath = QDir::cleanPath(parts.first() + QLatin1String("/") + relationship.target);
+ 
+                     sheet->setFilePath(fullPath);
+                 }

@@ -73,7 +73,6 @@ add_executable(dbschool1
         ProtocolWidget.h
         toolbarcalendarwidget.cpp
         toolbarcalendarwidget.h
-        toolbarcalendarwidget.ui
 )
 
 include(FetchContent)
@@ -93,6 +92,32 @@ FetchContent_Declare(
 )
 FetchContent_MakeAvailable(toml11)
 
+FetchContent_Declare(
+        QXlsx
+        GIT_REPOSITORY https://github.com/QtExcel/QXlsx.git
+        GIT_TAG        v1.5.0
+        SOURCE_SUBDIR  QXlsx
+)
+FetchContent_MakeAvailable(QXlsx)
+
+# Путь к исходникам после FetchContent
+set(QXLSX_SRC_DIR ${qxlsx_SOURCE_DIR}/QXlsx/source)  # автоматически определяет путь
+
+# Путь к патчу
+set(QXLSX_PATCH_FILE ${CMAKE_CURRENT_SOURCE_DIR}/fix-qxlsx-for-mingw.patch)
+
+# Создаём кастомную цель, которая применяется после скачивания, но до сборки
+add_custom_target(apply_qxlsx_patch ALL
+        COMMAND ${CMAKE_COMMAND} -E echo "Applying QXlsx patch for MinGW..."
+        COMMAND echo patch --dry-run -p1 -N -d ${QXLSX_SRC_DIR} FROM ${QXLSX_PATCH_FILE}
+        COMMAND patch --dry-run -p1 -N -d ${QXLSX_SRC_DIR} < ${QXLSX_PATCH_FILE} || ${CMAKE_COMMAND} -E echo "Patch already applied, skipping."
+        COMMENT "Patching QXlsx for MinGW"
+        VERBATIM
+)
+
+# Делаем сборку QXlsx зависимой от патча
+add_dependencies(QXlsx apply_qxlsx_patch)
+
 target_link_libraries(dbschool1
         Qt5::Core
         Qt5::Gui
@@ -101,4 +126,7 @@ target_link_libraries(dbschool1
         Qt5::Concurrent
         #tomlplusplus::tomlplusplus
         toml11::toml11
+        QXlsx::QXlsx
 )
+
+target_include_directories(dbschool1 PRIVATE ${qxlsx_SOURCE_DIR}/QXlsx/header)

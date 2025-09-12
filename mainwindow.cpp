@@ -17,6 +17,7 @@
 #include <QAction>
 #include <QApplication>
 #include <QDir>
+#include <QFileDialog>
 #include <QIcon>
 #include <QLabel>
 #include <QMessageBox>
@@ -31,6 +32,10 @@
 #include <QFuture>
 #include <QFutureInterface>
 #include <QFutureWatcher>
+
+// https://github.com/dbzhang800/QtXlsxWriter
+// https://github.com/j2doll/QXlsx.git
+#include "xlsxdocument.h"
 
 #include <QDebug>
 
@@ -85,6 +90,7 @@ MainWindow::MainWindow(QWidget *parent) :
         new QAction(QApplication::style()->standardIcon(QStyle::SP_BrowserReload), tr("Renew students"), this);
     QAction* issueInvoicesAction =
         new QAction(QApplication::style()->standardIcon(QStyle::SP_FileIcon), tr("Issue invoices"), this);
+
     QAction* reportForTeacher =
         new QAction(QApplication::style()->standardIcon(QStyle::SP_DirOpenIcon), tr("Teacher's report"), this);
     QAction* reportForDirector =
@@ -138,8 +144,6 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(reportForDirector, &QAction::triggered, this, &MainWindow::onReportForDirector);
     connect(issueInvoicesAction, &QAction::triggered, this, &MainWindow::onIssueInvoices);
 
-    connect(network, &NetworkInteraction::appendLog, logger, &ProtocolWidget::appendLog);
-
     // Top layout
     QSplitter* splitter = new QSplitter(Qt::Horizontal);
     splitter->addWidget(tabs);
@@ -148,6 +152,8 @@ MainWindow::MainWindow(QWidget *parent) :
     splitter->setSizes({800, 600});
     setCentralWidget(splitter);
     statusBar()->setWindowTitle(tr("Ready..."));
+
+    connect(network, &NetworkInteraction::appendLog, logger, &ProtocolWidget::appendLog);
 
     // check timer
     QTimer *checkTimer = new QTimer(this);
@@ -226,14 +232,8 @@ QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>> MainWindow::scan(const QD
 void MainWindow::onCreateAttendanceTables()
 {
     QDate date = gl_lastAttendanceDate.get();
-    const QDate end = QDate(date.year(), date.month(), 14);
-    QDate prevMonth = end.addMonths(-1);
-    const QDate start = QDate(prevMonth.year(), prevMonth.month(), 15);
-    const QDate searchDate = date.addDays(-3100); // Ищем учеников по курсам за последние 100 дней // TODO
+    const QDate searchDate = date.addDays(-Configuration().window_days); // Ищем учеников по курсам за последние 100 дней // TODO
 
-    logger->writeTimestamp(
-        tr("Creating tables from %1 till %2").arg(start.toString(Configuration::date_format)).arg(end.toString(Configuration::date_format))
-    );
     logger->writeTimestamp(
         tr("Creating tables by attendances from %1").arg(searchDate.toString(Configuration::date_format))
     );
@@ -384,7 +384,46 @@ void MainWindow::onIssueInvoices()
 
 void MainWindow::onReportForTeacher()
 {
-    qDebug() << "date=" << reportCalendarWidget->selectedDate();
+    qDebug() << "MainWindow::onReportForTeacher: date=" << reportCalendarWidget->selectedDate();
+    QDate date = reportCalendarWidget->selectedDate();
+    const QDate end = QDate(date.year(), date.month(), 14);
+    QDate prevMonth = end.addMonths(-1);
+    const QDate start = QDate(prevMonth.year(), prevMonth.month(), 15);
+    qDebug() << start << " - " << end;
+
+    logger->writeTimestamp(
+        tr("Creating the teacher's report from %1 till %2").arg(start.toString(Configuration::date_format)).arg(end.toString(Configuration::date_format))
+    );
+
+    QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>> acc = scan(start, end);
+    qDebug() << "acc.size=" << acc.size();
+    for (auto it = acc.constBegin(); it != acc.constEnd(); ++it) {
+        qDebug() << it.key() << it.value().first << it.value().second;
+
+    }
+
+    const QString defaultFileName =
+        QDate::currentDate().toString("yyyy-MM-dd") + tr("-report-teacher.xlsx");
+    QString filePath = QFileDialog::getSaveFileName(
+        this,
+        tr("Save teacher's report"),
+        QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation) + QDir::separator() + defaultFileName,
+        tr("Excel Files (*.xlsx);;All Files (*)") // File filters
+    );
+
+    if (filePath.isEmpty())
+    {
+        qDebug() << "cancelled";
+        return;
+    }
+
+    using namespace QXlsx;
+    Document doc;
+    doc.write(1, 1, "Проверка");
+    doc.write(2, 1, 123);
+
+    doc.saveAs(filePath);
+
     QMessageBox::critical(
         this,
         tr("Teacher's report"),
@@ -393,7 +432,46 @@ void MainWindow::onReportForTeacher()
 
 void MainWindow::onReportForDirector()
 {
-    qDebug() << "date=" << reportCalendarWidget->selectedDate();
+    qDebug() << "MainWindow::onReportForDirector: date=" << reportCalendarWidget->selectedDate();
+    QDate date = reportCalendarWidget->selectedDate();
+    const QDate end = QDate(date.year(), date.month(), 14);
+    QDate prevMonth = end.addMonths(-1);
+    const QDate start = QDate(prevMonth.year(), prevMonth.month(), 15);
+    qDebug() << start << " - " << end;
+
+    logger->writeTimestamp(
+        tr("Creating the director's report from %1 till %2").arg(start.toString(Configuration::date_format)).arg(end.toString(Configuration::date_format))
+    );
+
+    QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>> acc = scan(start, end);
+    qDebug() << "acc.size=" << acc.size();
+    for (auto it = acc.constBegin(); it != acc.constEnd(); ++it) {
+        qDebug() << it.key() << it.value().first << it.value().second;
+
+    }
+
+    const QString defaultFileName =
+        QDate::currentDate().toString("yyyy-MM-dd") + tr("-report-director.xlsx");
+    QString filePath = QFileDialog::getSaveFileName(
+        this,
+        tr("Save director's report"),
+        QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation) + QDir::separator() + defaultFileName,
+        tr("Excel Files (*.xlsx);;All Files (*)") // File filters
+    );
+
+    if (filePath.isEmpty())
+    {
+        qDebug() << "cancelled";
+        return;
+    }
+
+    using namespace QXlsx;
+    Document doc;
+    doc.write(1, 1, "Проверка");
+    doc.write(2, 1, 123);
+
+    doc.saveAs(filePath);
+
     QMessageBox::critical(
         this,
         tr("Director's report"),

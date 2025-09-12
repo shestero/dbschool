@@ -16,13 +16,7 @@ Configuration::Configuration()
     try
     {
         auto config = toml::parse(config_file_name);
-        /*
-        toml::table tbl;
-        tbl = toml::parse_file(config_file_name);
-        cout << tbl << endl;
-
-        teach_server = tbl["teachserver"].as_string()->get();
-        */
+        window_days = config.contains("window-days")? config.at("window-days").as_integer(): 120;
         teach_server = config.at("teachserver").as_string();
         login = config.at("api").at("login").as_string();
         password = config.at("api").at("password").as_string();
