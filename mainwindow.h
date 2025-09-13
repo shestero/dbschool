@@ -24,7 +24,9 @@ public:
     explicit MainWindow(QWidget* parent = nullptr);
     ~MainWindow() override;
 
-    QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>> scan(const QDate& date_start, const QDate& date_end);
+    // [ studends map, ss_id => st_id  => дата => сумма ]
+    QPair<QMap<int, QString>, QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>>>
+        scan(const QDate& date_start, const QDate& date_end);
 
 public slots:
     void onCreateAttendanceTables();

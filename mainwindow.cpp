@@ -3,6 +3,14 @@
 //
 
 #include "mainwindow.h"
+
+#include <tuple>
+#include <utility>
+template<typename T1, typename T2>
+std::pair<T1,T2> toStdPair(const QPair<T1,T2>& qp) {
+    return {qp.first, qp.second};
+}
+
 #include "Attendance.h"
 #include "Configuration.h"
 #include "LastAttendanceDate.h"
@@ -38,8 +46,6 @@
 #include "xlsxdocument.h"
 
 #include <QDebug>
-
-#include "Attendance.h"
 
 #define LASTDATE_FILENAME   "last-date.txt"
 static LastAttendanceDate gl_lastAttendanceDate = LastAttendanceDate(LASTDATE_FILENAME);
@@ -164,7 +170,8 @@ MainWindow::MainWindow(QWidget *parent) :
 
 MainWindow::~MainWindow() = default;
 
-QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>> MainWindow::scan(const QDate& date_start, const QDate& date_end)
+QPair<QMap<int, QString>, QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>>>
+    MainWindow::scan(const QDate& date_start, const QDate& date_end)
 {
     const QStringList files =
         QDir("attendance/inbox").entryList(QStringList() << "*.tsv", QDir::Files);
@@ -176,6 +183,7 @@ QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>> MainWindow::scan(const QD
     logger->progress_max(files.size());
 
     QApplication::setOverrideCursor(Qt::WaitCursor);  // курсор "ожидание"
+    QMap<int, QString> students;
     QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>> acc; // ss_id => st_id  => дата => сумма
     int i = 0;
     for (const QString& file : files)
@@ -193,11 +201,14 @@ QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>> MainWindow::scan(const QD
             {
                 const QVector<QString>& av = attendance.students[st_id];
                 qDebug() << "av=" << av;
+                if (!av.isEmpty())
+                    students[st_id] = av.at(0);
+
                 int j = 0;
                 const QDate minDate = std::min(attendance.date_min, date_start);
                 const QDate maxDate = std::max(attendance.date_max, date_end);
                 for (QDate d = minDate; d <= maxDate; d = d.addDays(1)) {
-                    const QString& s = av.value(++j, ""); // нулевой элемет содержит ФИО
+                    const QString& s = av.value(++j, ""); // нулевой элемет содержит ФИО - тут пропускаем
                     if (s.isEmpty())
                         continue;
                     bool ok = false;
@@ -226,7 +237,7 @@ QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>> MainWindow::scan(const QD
     }
     QApplication::restoreOverrideCursor(); // вернуть обычный курсор
 
-    return acc;
+    return { students, acc };
 }
 
 void MainWindow::onCreateAttendanceTables()
@@ -238,8 +249,9 @@ void MainWindow::onCreateAttendanceTables()
         tr("Creating tables by attendances from %1").arg(searchDate.toString(Configuration::date_format))
     );
 
-
-    QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>> acc = scan(searchDate, QDate::currentDate());
+    QMap<int, QString> _students;
+    QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>> acc;
+    std::tie(_students, acc) = toStdPair(scan(searchDate, QDate::currentDate()));
     qDebug() << "acc.size=" << acc.size();
     for (auto it = acc.constBegin(); it != acc.constEnd(); ++it) {
         qDebug() << it.key() << it.value().first << it.value().second;
@@ -395,12 +407,18 @@ void MainWindow::onReportForTeacher()
         tr("Creating the teacher's report from %1 till %2").arg(start.toString(Configuration::date_format)).arg(end.toString(Configuration::date_format))
     );
 
-    QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>> acc = scan(start, end);
+    QApplication::setOverrideCursor(Qt::WaitCursor);  // курсор "ожидание"
+
+    QMap<int, QString> students;
+    QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>> acc;
+    std::tie(students, acc) = toStdPair(scan(start, end));
     qDebug() << "acc.size=" << acc.size();
     for (auto it = acc.constBegin(); it != acc.constEnd(); ++it) {
         qDebug() << it.key() << it.value().first << it.value().second;
 
     }
+
+    QApplication::restoreOverrideCursor(); // вернуть обычный курсор
 
     const QString defaultFileName =
         QDate::currentDate().toString("yyyy-MM-dd") + tr("-report-teacher.xlsx");
@@ -417,12 +435,45 @@ void MainWindow::onReportForTeacher()
         return;
     }
 
+    QApplication::setOverrideCursor(Qt::WaitCursor);  // курсор "ожидание"
+
     using namespace QXlsx;
     Document doc;
-    doc.write(1, 1, "Проверка");
-    doc.write(2, 1, 123);
+    doc.write(1, 1, tr("%1 класс").arg("..."));
+    doc.write(2, 1, tr("Расчётный период с %1 по %2")
+        .arg(start.toString(Configuration::date_format))
+        .arg(end.toString(Configuration::date_format))
+    );
+    doc.write(4, 1, tr("Full  name"));
+    doc.write(4, 3, tr("Subject name"));
+    doc.write(5, 2, tr("Total"));
+    //doc.currentWorksheet()->mergeCells(CellRange("B4:B6"));
+    doc.mergeCells(CellRange("A4:A6"));
+    doc.mergeCells(CellRange("B5:B6"));
+    int i = 6;
+    for (auto itst = students.constBegin(); itst != students.constEnd(); ++itst)
+    {
+        doc.write(++i, 1, itst.value());
+
+        int j = 3;
+        for (auto itss = acc.constBegin(); itss != acc.constEnd(); ++itss)
+        {
+            doc.write(5, j, itss.value().first);
+            doc.mergeCells(CellRange(5, j, 5, j+1));
+            doc.write(6, j, tr("Amount"));
+            doc.write(6, j+1, tr("Summa"));
+
+            int sum = 0;
+            for (int v : itss.value().second[itst.key()])
+                sum += v;
+            doc.write(i, j, sum);
+            j += 2;
+        }
+    }
 
     doc.saveAs(filePath);
+
+    QApplication::restoreOverrideCursor(); // вернуть обычный курсор
 
     QMessageBox::critical(
         this,
@@ -443,12 +494,18 @@ void MainWindow::onReportForDirector()
         tr("Creating the director's report from %1 till %2").arg(start.toString(Configuration::date_format)).arg(end.toString(Configuration::date_format))
     );
 
-    QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>> acc = scan(start, end);
+    QApplication::setOverrideCursor(Qt::WaitCursor);  // курсор "ожидание"
+
+    QMap<int, QString> students;
+    QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>> acc;
+    std::tie(students, acc) = toStdPair(scan(start, end));
     qDebug() << "acc.size=" << acc.size();
     for (auto it = acc.constBegin(); it != acc.constEnd(); ++it) {
         qDebug() << it.key() << it.value().first << it.value().second;
 
     }
+
+    QApplication::restoreOverrideCursor(); // вернуть обычный курсор
 
     const QString defaultFileName =
         QDate::currentDate().toString("yyyy-MM-dd") + tr("-report-director.xlsx");
@@ -465,12 +522,16 @@ void MainWindow::onReportForDirector()
         return;
     }
 
+    QApplication::setOverrideCursor(Qt::WaitCursor);  // курсор "ожидание"
+
     using namespace QXlsx;
     Document doc;
     doc.write(1, 1, "Проверка");
     doc.write(2, 1, 123);
 
     doc.saveAs(filePath);
+
+    QApplication::restoreOverrideCursor(); // вернуть обычный курсор
 
     QMessageBox::critical(
         this,
