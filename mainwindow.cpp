@@ -3,6 +3,9 @@
 //
 
 #include "mainwindow.h"
+#include "CustomComboBoxSortFilterProxyModel.h"
+#include "cmake-build-debug/_deps/qxlsx-src/QXlsx/header/xlsxcellreference.h"
+#include "cmake-build-debug/_deps/qxlsx-src/QXlsx/header/xlsxformat.h"
 
 #include <tuple>
 #include <utility>
@@ -55,27 +58,33 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     setWindowTitle(tr("School accounting"));
 
+    boldFormat.setFontBold(true);
+    wrapFormat.setTextWrap(true);
+    wrapFormat.setVerticalAlignment(QXlsx::Format::AlignVCenter);
+    wrapFormat.setHorizontalAlignment(QXlsx::Format::AlignHCenter);
+    moneyFormat.setNumberFormat("₽#,##0");
+
     // Tabs
     auto tabs = new QTabWidget(this);
 
-    auto pClassesModel = new CSVTableModel(this, "classes.tsv");
+    pClassesModel = new CSVTableModel(this, "classes.tsv");
     TableView* pClasses = new TableView(this, pClassesModel);
     pClasses->setColumnWidth(1, 300);
     tabs->addTab(pClasses, tr("Classes"));
 
-    auto pStudentsModel = new CSVTableModel(this, "students.tsv", 2, pClassesModel);
+    pStudentsModel = new CSVTableModel(this, "students.tsv", 2, pClassesModel);
     auto pStudents = new TableView(this, pStudentsModel);
     pStudents->setItemDelegateForColumn(2, new ForeignKeyDelegate(pClassesModel, this));
     pStudents->setColumnWidth(1, 400);
     pStudents->setColumnWidth(2, 240);
     tabs->addTab(pStudents, tr("Students"));
 
-    auto pTeacherModel = new CSVTableModel(this, "teachers.tsv");
+    pTeacherModel = new CSVTableModel(this, "teachers.tsv");
     TableView* pTeachers = new TableView(this, pTeacherModel);
     pTeachers->setColumnWidth(1, 400);
     tabs->addTab(pTeachers, tr("Teachers"));
 
-    auto pSectionsModel = new CSVTableModel(this, "sections.tsv", 3, pTeacherModel);
+    pSectionsModel = new CSVTableModel(this, "sections.tsv", 3, pTeacherModel);
     TableView* pSections = new TableView(this, pSectionsModel);
     pSections->setItemDelegateForColumn(3, new ForeignKeyDelegate(pTeacherModel, this));
     pSections->setColumnWidth(1, 400);
@@ -401,22 +410,21 @@ void MainWindow::onReportForTeacher()
     const QDate end = QDate(date.year(), date.month(), 14);
     QDate prevMonth = end.addMonths(-1);
     const QDate start = QDate(prevMonth.year(), prevMonth.month(), 15);
-    qDebug() << start << " - " << end;
 
     logger->writeTimestamp(
-        tr("Creating the teacher's report from %1 till %2").arg(start.toString(Configuration::date_format)).arg(end.toString(Configuration::date_format))
+        tr("Creating the teacher's report from %1 till %2")
+            .arg(start.toString(Configuration::date_format))
+            .arg(end.toString(Configuration::date_format))
     );
 
     QApplication::setOverrideCursor(Qt::WaitCursor);  // курсор "ожидание"
 
-    QMap<int, QString> students;
+    QMap<int, QString> reportStudents;
     QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>> acc;
-    std::tie(students, acc) = toStdPair(scan(start, end));
-    qDebug() << "acc.size=" << acc.size();
-    for (auto it = acc.constBegin(); it != acc.constEnd(); ++it) {
-        qDebug() << it.key() << it.value().first << it.value().second;
+    std::tie(reportStudents, acc) = toStdPair(scan(start, end));
 
-    }
+    // Цены за занятия
+    QMap<int, QString> prices = pSectionsModel->dictionary(2);
 
     QApplication::restoreOverrideCursor(); // вернуть обычный курсор
 
@@ -437,48 +445,114 @@ void MainWindow::onReportForTeacher()
 
     QApplication::setOverrideCursor(Qt::WaitCursor);  // курсор "ожидание"
 
-    using namespace QXlsx;
-    Document doc;
-    doc.write(1, 1, tr("%1 класс").arg("..."));
-    doc.write(2, 1, tr("Расчётный период с %1 по %2")
-        .arg(start.toString(Configuration::date_format))
-        .arg(end.toString(Configuration::date_format))
-    );
-    doc.write(4, 1, tr("Full  name"));
-    doc.write(4, 3, tr("Subject name"));
-    doc.write(5, 2, tr("Total"));
-    //doc.currentWorksheet()->mergeCells(CellRange("B4:B6"));
-    doc.mergeCells(CellRange("A4:A6"));
-    doc.mergeCells(CellRange("B5:B6"));
-    int i = 6;
-    for (auto itst = students.constBegin(); itst != students.constEnd(); ++itst)
+    QMap<int, QString> allTeachers = pTeacherModel->dictionary();
+    QList<QPair<int, QString>> sortedTeachers;
+    for (auto it = allTeachers.constBegin(); it != allTeachers.constEnd(); ++it)
     {
-        doc.write(++i, 1, itst.value());
+        // todo: filter teachers
+        // todo: check repeating
+        sortedTeachers.append(QPair<int, QString>(it.key(), it.value()));
+    }
+    std::sort(sortedTeachers.begin(), sortedTeachers.end(), [](QPair<int, QString>& a, QPair<int, QString>& b)
+    {
+        if (a.second == b.second)
+            return a.first < b.first;
+        return a.second.compare(b.second, Qt::CaseInsensitive) < 0;
+    });
 
-        int j = 3;
-        for (auto itss = acc.constBegin(); itss != acc.constEnd(); ++itss)
-        {
-            doc.write(5, j, itss.value().first);
-            doc.mergeCells(CellRange(5, j, 5, j+1));
-            doc.write(6, j, tr("Amount"));
-            doc.write(6, j+1, tr("Summa"));
-
-            int sum = 0;
-            for (int v : itss.value().second[itst.key()])
-                sum += v;
-            doc.write(i, j, sum);
-            j += 2;
-        }
+    // В каких классах учатся эти ученики?
+    QMap<int, QString> allStudents = pStudentsModel->dictionary(2);
+    // todo: check that names in reportStudents and allStudents are the same
+    QMap<QString, QSet<int>> studentsByClasses;
+    for (auto it = allStudents.constBegin(); it != allStudents.constEnd(); ++it)
+    {
+        if (reportStudents.contains(it.key()))
+            studentsByClasses[it.value()].insert(it.key());
     }
 
+    using namespace QXlsx;
+    Document doc;
+
+    QMap<int, QString> allClasses = pClassesModel->dictionary();
+    QList<QPair<int, QString>> sortedCalsses;
+    for (auto it = allClasses.constBegin(); it != allClasses.constEnd(); ++it)
+    {
+        if (studentsByClasses.keys().contains(it.value())) // filter the classes mentioned in report only
+            sortedCalsses.append(QPair<int, QString>(it.key(), it.value()));
+    }
+    std::sort(sortedCalsses.begin(), sortedCalsses.end(), [](QPair<int, QString>& a, QPair<int, QString>& b)
+    {
+        if (a.second == b.second)
+            return a.first < b.first;
+        return CustomComboBoxSortFilterProxyModel::lessThan(a.second, b.second);
+    });
+
+    // Перебор учителей
+    for (auto it = sortedTeachers.constBegin(); it != sortedTeachers.constEnd(); ++it)
+    {
+        doc.addSheet(it->second);
+        doc.write(1, 1, it->second);
+        doc.write(2, 1, tr("Расчётный период с %1 по %2")
+            .arg(start.toString(Configuration::date_format))
+            .arg(end.toString(Configuration::date_format))
+        );
+
+        doc.write(4, 1, tr("Class"), boldFormat);
+        doc.write(4, 3, tr("Subject name"), boldFormat);
+        doc.write(5, 2, tr("Total"), boldFormat);
+        //doc.currentWorksheet()->mergeCells(CellRange("B4:B6"));
+        doc.mergeCells(CellRange("A4:A6"));
+        doc.mergeCells(CellRange("B5:B6"));
+        int j = 3;
+
+
+        QStringList total;
+        int i = 6;
+        for (auto cls : sortedCalsses)
+        {
+            doc.write(++i, 1, cls.second);
+
+            int j = 3;
+            QStringList total;
+            for (auto itss = acc.constBegin(); itss != acc.constEnd(); ++itss)
+            {
+                doc.write(5, j, itss.value().first, wrapFormat);
+                doc.setRowHeight(5, 60);
+                doc.mergeCells(CellRange(5, j, 5, j+1));
+                doc.write(6, j, tr("Amount"));
+                doc.write(6, j+1, tr("Summa"));
+
+                bool ok = false;
+                double price = prices[itss.key()].toDouble(&ok);
+                if (ok)
+                {
+                    doc.write(i, j+1, QString("=%1*%2").arg(QXlsx::CellReference(i, j).toString()).arg(price), moneyFormat);
+                    total += QXlsx::CellReference(i, j+1).toString();
+                } else
+                {
+                    qWarning() << "No price for" << itss.value().first;
+                    doc.write(i, j+1, "?");
+                }
+
+                int sum = 0;
+                // TODO
+                doc.write(i, j, 1234);
+                /*
+                for (int v : itss.value().second[student.first])
+                    sum += v;
+                doc.write(i, j, sum);
+                */
+                j += 2;
+            }
+            doc.write(i, 2, total.join("+").prepend("="), moneyFormat);
+        }
+        doc.write(i+1, 2, QString("=sum(B7:B%1)").arg(i), moneyFormat);
+    }
+
+    doc.selectSheet(0);
     doc.saveAs(filePath);
 
     QApplication::restoreOverrideCursor(); // вернуть обычный курсор
-
-    QMessageBox::critical(
-        this,
-        tr("Teacher's report"),
-        tr("Under construction"));
 }
 
 void MainWindow::onReportForDirector()
@@ -496,14 +570,12 @@ void MainWindow::onReportForDirector()
 
     QApplication::setOverrideCursor(Qt::WaitCursor);  // курсор "ожидание"
 
-    QMap<int, QString> students;
+    QMap<int, QString> reportStudents;
     QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>> acc;
-    std::tie(students, acc) = toStdPair(scan(start, end));
-    qDebug() << "acc.size=" << acc.size();
-    for (auto it = acc.constBegin(); it != acc.constEnd(); ++it) {
-        qDebug() << it.key() << it.value().first << it.value().second;
+    std::tie(reportStudents, acc) = toStdPair(scan(start, end));
 
-    }
+    // Цены за занятия
+    QMap<int, QString> prices = pSectionsModel->dictionary(2);
 
     QApplication::restoreOverrideCursor(); // вернуть обычный курсор
 
@@ -524,19 +596,96 @@ void MainWindow::onReportForDirector()
 
     QApplication::setOverrideCursor(Qt::WaitCursor);  // курсор "ожидание"
 
+    // В каких классах учатся эти ученики?
+    QMap<int, QString> allStudents = pStudentsModel->dictionary(2);
+    // todo: check that names in reportStudents and allStudents are the same
+    QMap<QString, QSet<int>> studentsByClasses;
+    for (auto it = allStudents.constBegin(); it != allStudents.constEnd(); ++it)
+    {
+        if (reportStudents.contains(it.key()))
+            studentsByClasses[it.value()].insert(it.key());
+    }
+
     using namespace QXlsx;
     Document doc;
-    doc.write(1, 1, "Проверка");
-    doc.write(2, 1, 123);
 
+    QList<QString> sortedCalsses = studentsByClasses.keys();
+    std::sort(sortedCalsses.begin(), sortedCalsses.end(), [](const auto& a, const auto& b)
+    {
+        return CustomComboBoxSortFilterProxyModel::lessThan(a, b);
+    });
+
+    // Перебор классов
+    for (QString className : sortedCalsses)
+    {
+        doc.addSheet(className);
+        doc.write(1, 1, tr("%1 класс").arg(className));
+        doc.write(2, 1, tr("Расчётный период с %1 по %2")
+            .arg(start.toString(Configuration::date_format))
+            .arg(end.toString(Configuration::date_format))
+        );
+        doc.write(4, 1, tr("Full name"), boldFormat);
+        doc.setColumnWidth(1, 30);
+        doc.write(4, 3, tr("Subject name"), boldFormat);
+        doc.write(5, 2, tr("Total"), boldFormat);
+        //doc.currentWorksheet()->mergeCells(CellRange("B4:B6"));
+        doc.mergeCells(CellRange("A4:A6"));
+        doc.mergeCells(CellRange("B5:B6"));
+
+        QList<QPair<int, QString>> sortedStudents;
+        for (int studentCode : studentsByClasses[className])
+        {
+            sortedStudents.append(QPair<int, QString>(studentCode, reportStudents[studentCode]));
+        }
+        std::sort(sortedStudents.begin(), sortedStudents.end(), [](QPair<int, QString>& a, QPair<int, QString>& b)
+        {
+            if (a.second == b.second)
+                return a.first < b.first;
+            return a.second.compare(b.second, Qt::CaseInsensitive) < 0;
+        });
+
+        int i = 6;
+        for (auto student : sortedStudents)
+        {
+            doc.write(++i, 1, student.second);
+
+            int j = 3;
+            QStringList total;
+            for (auto itss = acc.constBegin(); itss != acc.constEnd(); ++itss)
+            {
+                doc.write(5, j, itss.value().first, wrapFormat);
+                doc.setRowHeight(5, 60);
+                doc.mergeCells(CellRange(5, j, 5, j+1));
+                doc.write(6, j, tr("Amount"));
+                doc.write(6, j+1, tr("Summa"));
+
+                bool ok = false;
+                double price = prices[itss.key()].toDouble(&ok);
+                if (ok)
+                {
+                    doc.write(i, j+1, QString("=%1*%2").arg(QXlsx::CellReference(i, j).toString()).arg(price), moneyFormat);
+                    total += QXlsx::CellReference(i, j+1).toString();
+                } else
+                {
+                    qWarning() << "No price for" << itss.value().first;
+                    doc.write(i, j+1, "?");
+                }
+
+                int sum = 0;
+                for (int v : itss.value().second[student.first])
+                    sum += v;
+                doc.write(i, j, sum);
+                j += 2;
+            }
+            doc.write(i, 2, total.join("+").prepend("="), moneyFormat);
+        }
+        doc.write(i+1, 2, QString("=sum(B7:B%1)").arg(i), moneyFormat);
+    }
+
+    doc.selectSheet(0);
     doc.saveAs(filePath);
 
     QApplication::restoreOverrideCursor(); // вернуть обычный курсор
-
-    QMessageBox::critical(
-        this,
-        tr("Director's report"),
-        tr("Under construction"));
 }
 
 void MainWindow::onRegularChecks() {

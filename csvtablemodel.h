@@ -30,6 +30,8 @@ public:
 
     void load(QMap<int, QMap<int, QString>> foreign = {});
     void save();
+
+    QMap<int, QString> dictionary(int titleCol = 1) const;
 };
 
 

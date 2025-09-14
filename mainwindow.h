@@ -12,7 +12,10 @@
 
 #include "NetworkInteraction.h"
 #include "ProtocolWidget.h"
+#include "csvtablemodel.h"
 #include "toolbarcalendarwidget.h"
+
+#include "xlsxformat.h"
 
 
 class MainWindow : public QMainWindow
@@ -42,6 +45,13 @@ signals:
     void sendMessage(const QString& msg);
 
 private:
+    QXlsx::Format boldFormat, wrapFormat, moneyFormat;
+
+    CSVTableModel* pClassesModel;
+    CSVTableModel* pStudentsModel;
+    CSVTableModel* pTeacherModel;
+    CSVTableModel* pSectionsModel;
+
     QString calculateSha256Hash(const QString& filePath);
 
     NetworkInteraction* network;

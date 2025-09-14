@@ -79,7 +79,7 @@
     </message>
     <message>
         <source>Under construction</source>
-        <translation>В разработке...</translation>
+        <translation type="vanished">В разработке...</translation>
     </message>
     <message>
         <source>Sending attendance tables</source>
@@ -164,6 +164,126 @@
     <message>
         <source>Success</source>
         <translation>Успешно!</translation>
+    </message>
+    <message>
+        <source>MainWindow</source>
+        <translation></translation>
+    </message>
+    <message>
+        <source>Chromatogram</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>*.txt</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Report file</source>
+        <translation>Файл отчёта</translation>
+    </message>
+    <message>
+        <source>*.xlsx</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Sheet_name</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>precision</source>
+        <translation>точность</translation>
+    </message>
+    <message>
+        <source>0.1</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Generate</source>
+        <translation>Созать</translation>
+    </message>
+    <message>
+        <source>Warning: no existing attendance tables found!</source>
+        <translation>Предупреждение: бланки посещений не найдены</translation>
+    </message>
+    <message>
+        <source>Something wrong in file %1 student %2 (%3), date %4, index=%5: s=%6</source>
+        <translation>Что то не так в файле %1 у ученика %2 (код %3), дата %4, индекс %5 строка %6</translation>
+    </message>
+    <message>
+        <source>Error: cannot process file %1</source>
+        <translation>Ошибка обработки файла %1</translation>
+    </message>
+    <message>
+        <source>Creating tables by attendances from %1</source>
+        <translation>Создание таблиц по посещаемости %1</translation>
+    </message>
+    <message>
+        <source>Receiving tables</source>
+        <translation>Получить бланки</translation>
+    </message>
+    <message>
+        <source>Creating the teacher&apos;s report from %1 till %2</source>
+        <translation>Создаём отчёт учителей по датам с %1 по %2</translation>
+    </message>
+    <message>
+        <source>-report-teacher.xlsx</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Save teacher&apos;s report</source>
+        <translation>Сохранить отчёт учителей</translation>
+    </message>
+    <message>
+        <source>Excel Files (*.xlsx);;All Files (*)</source>
+        <translation>Файлы Excel (*.xlsx);;All Files (*)</translation>
+    </message>
+    <message>
+        <source>%1 класс</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Расчётный период с %1 по %2</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Full  name</source>
+        <translation type="vanished">ФИО</translation>
+    </message>
+    <message>
+        <source>Subject name</source>
+        <translation>Название кружка (предмет)</translation>
+    </message>
+    <message>
+        <source>Total</source>
+        <translation>Всего</translation>
+    </message>
+    <message>
+        <source>Amount</source>
+        <translation>Кол-во</translation>
+    </message>
+    <message>
+        <source>Summa</source>
+        <translation>Сумма</translation>
+    </message>
+    <message>
+        <source>Creating the director&apos;s report from %1 till %2</source>
+        <translation>Создание отчёта для директора с %1 по %2</translation>
+    </message>
+    <message>
+        <source>-report-director.xlsx</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Save director&apos;s report</source>
+        <translation>Сохранить отчёт для директора</translation>
+    </message>
+    <message>
+        <source>Class</source>
+        <translation>Класс</translation>
+    </message>
+    <message>
+        <source>Full name</source>
+        <translation>ФИО</translation>
     </message>
 </context>
 <context>
@@ -276,6 +396,13 @@
     <message>
         <source>&amp;Copy</source>
         <translation></translation>
+    </message>
+</context>
+<context>
+    <name>main</name>
+    <message>
+        <source>Hello Android</source>
+        <translation type="unfinished"></translation>
     </message>
 </context>
 </TS>

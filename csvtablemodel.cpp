@@ -150,6 +150,39 @@ void CSVTableModel::save()
     }
 }
 
+QMap<int, QString> CSVTableModel::dictionary(int titleCol) const
+{
+    QMap<int, QString> ret;
+    for (int i = 0; i < rowCount(); i++)
+    {
+        auto primary = item(i, 0);
+        if (!primary)
+        {
+            qWarning() << "Warning: no item for the primary column of row" << i <<
+                "at file" << file_name;
+            continue;
+        }
+        bool ok = false;
+        int key = primary->text().toInt(&ok);
+        if (!ok)
+        {
+            qWarning() << "Warning: cannot parse key from the primary column of row" << i <<
+                "at file" << file_name;
+            qDebug() << "It's value" << primary->text();
+            continue;
+        }
+        auto secondary = item(i, titleCol);
+        if (!secondary)
+        {
+            qWarning() << "Warning: no item for the secondary column (" << titleCol << ") of row" << i <<
+                "at file" << file_name;
+            continue;
+        }
+        ret.insert(key, secondary->text());
+    }
+    return ret;
+}
+
 /*
 int CSVTableModel::rowCount(const QModelIndex &parent) const
 {

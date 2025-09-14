@@ -6,18 +6,15 @@
 
 #include <QDebug>
 
-bool CustomComboBoxSortFilterProxyModel::lessThan(const QModelIndex &left, const QModelIndex &right) const
+bool CustomComboBoxSortFilterProxyModel::lessThan(QString l, QString r)
 {
-    // Retrieve data from the source model
-    QString l = sourceModel()->data(left, Qt::DisplayRole).toString();
-    QString r = sourceModel()->data(right, Qt::DisplayRole).toString();
 
     bool okl = false, okr = false;
     int li = l.toInt(&okl);
     int lr = r.toInt(&okr);
     if (okl && okr)
     {
-            return li < lr;
+        return li < lr;
     }
 
     if (l.length() == 1 && "0" <= l && l <= "9") l.prepend("0");
@@ -28,4 +25,13 @@ bool CustomComboBoxSortFilterProxyModel::lessThan(const QModelIndex &left, const
     if (r.length() == 3 && r.at(0).isDigit() && r.at(1).isDigit() && !r.at(2).isDigit()) r.prepend("0");
 
     return l < r;
+}
+
+bool CustomComboBoxSortFilterProxyModel::lessThan(const QModelIndex &left, const QModelIndex &right) const
+{
+    // Retrieve data from the source model
+    QString l = sourceModel()->data(left, Qt::DisplayRole).toString();
+    QString r = sourceModel()->data(right, Qt::DisplayRole).toString();
+
+    return lessThan(l, r);
 }

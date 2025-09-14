@@ -14,6 +14,8 @@ public:
     explicit CustomComboBoxSortFilterProxyModel(QObject *parent = nullptr)
         : QSortFilterProxyModel(parent) {}
 
+    static bool lessThan(QString l, QString r);
+
 protected:
     bool lessThan(const QModelIndex &left, const QModelIndex &right) const override;
 };
