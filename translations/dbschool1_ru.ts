@@ -238,10 +238,6 @@
         <translation>Файлы Excel (*.xlsx);;All Files (*)</translation>
     </message>
     <message>
-        <source>%1 класс</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Расчётный период с %1 по %2</source>
         <translation type="unfinished"></translation>
     </message>
@@ -284,6 +280,42 @@
     <message>
         <source>Full name</source>
         <translation>ФИО</translation>
+    </message>
+    <message>
+        <source>Creating invoices for period from %1 till %2</source>
+        <translation>Создание счетов с %1 по %2</translation>
+    </message>
+    <message>
+        <source>-invoices.xlsx</source>
+        <translation type="unfinished"></translation>
+    </message>
+    <message>
+        <source>Save invoices</source>
+        <translation>Сохранение счетов</translation>
+    </message>
+    <message>
+        <source>Subject</source>
+        <translation>Предмет</translation>
+    </message>
+    <message>
+        <source>Dates</source>
+        <translation>Даты</translation>
+    </message>
+    <message>
+        <source>Price</source>
+        <translation>Цена</translation>
+    </message>
+    <message>
+        <source>%1 class</source>
+        <translation>%1 класс</translation>
+    </message>
+    <message>
+        <source>The inovice for period is from %1 till %2</source>
+        <translation>Счет за период с %1 по %2</translation>
+    </message>
+    <message>
+        <source>The report period is from %1 till %2</source>
+        <translation>Отчёт за период с %1 по %2</translation>
     </message>
 </context>
 <context>

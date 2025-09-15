@@ -53,6 +53,13 @@ std::pair<T1,T2> toStdPair(const QPair<T1,T2>& qp) {
 #define LASTDATE_FILENAME   "last-date.txt"
 static LastAttendanceDate gl_lastAttendanceDate = LastAttendanceDate(LASTDATE_FILENAME);
 
+QXlsx::Format centred(QXlsx::Format format = QXlsx::Format())
+{
+    format.setVerticalAlignment(QXlsx::Format::AlignVCenter);
+    format.setHorizontalAlignment(QXlsx::Format::AlignHCenter);
+    return format;
+}
+
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent), network(new NetworkInteraction(this))
 {
@@ -60,8 +67,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     boldFormat.setFontBold(true);
     wrapFormat.setTextWrap(true);
-    wrapFormat.setVerticalAlignment(QXlsx::Format::AlignVCenter);
-    wrapFormat.setHorizontalAlignment(QXlsx::Format::AlignHCenter);
+    wrapFormat = centred(wrapFormat);
     moneyFormat.setNumberFormat("₽#,##0");
 
     // Tabs
@@ -193,7 +199,7 @@ QPair<QMap<int, QString>, QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>>
 
     QApplication::setOverrideCursor(Qt::WaitCursor);  // курсор "ожидание"
     QMap<int, QString> students;
-    QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>> acc; // ss_id => st_id  => дата => сумма
+    QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>> acc; // ss_id => st_id  => дата => кол-во
     int i = 0;
     for (const QString& file : files)
     {
@@ -383,6 +389,143 @@ void MainWindow::onRefreshStudentTable()
     }
 }
 
+void MainWindow::invoices(const QDate& start, const QDate& end)
+{
+    MainWindow::logger->writeTimestamp(
+        tr("Creating invoices for period from %1 till %2")
+            .arg(start.toString(Configuration::date_format))
+            .arg(end.toString(Configuration::date_format))
+    );
+
+    QApplication::setOverrideCursor(Qt::WaitCursor);  // курсор "ожидание"
+
+    // [ studends map, ss_id => st_id => дата => кол-во ]
+    QMap<int, QString> reportStudents;
+    QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>> acc;
+    std::tie(reportStudents, acc) = toStdPair(scan(start, end));
+
+    // st_id => ss_id => дата => кол-во
+    QMap<int, QMap<int, QMap<QDate, int>>> acc2; // todo
+    for (auto i1 = acc.constBegin(); i1 != acc.constEnd(); ++i1)
+        for (auto i2 = i1.value().second.constBegin(); i2 != i1.value().second.constEnd(); ++i2)
+            acc2[i2.key()][i1.key()] = i2.value();
+
+    // Классы
+    QMap<int, QString> allClasses = pClassesModel->dictionary();
+
+    // Занятия и цены
+    QMap<int, QString> sections = pSectionsModel->dictionary();
+    QMap<int, QString> prices = pSectionsModel->dictionary(2);
+
+    QList<QPair<int, QString>> sortedStudents;
+    for (auto it = reportStudents.constBegin(); it != reportStudents.constEnd(); ++it)
+    {
+        sortedStudents.append(QPair<int, QString>(it.key(), it.value()));
+    }
+    std::sort(sortedStudents.begin(), sortedStudents.end(), [](QPair<int, QString>& a, QPair<int, QString>& b)
+    {
+        if (a.second == b.second)
+            return a.first < b.first;
+        return a.second.compare(b.second, Qt::CaseInsensitive) < 0;
+    });
+
+    // В каких классах учатся эти ученики?
+    QMap<int, QString> allStudents = pStudentsModel->dictionary(2);
+    // todo: check that names in reportStudents and allStudents are the same
+
+    QApplication::restoreOverrideCursor(); // вернуть обычный курсор
+
+    const QString defaultFileName =
+        QDate::currentDate().toString("yyyy-MM-dd") + tr("-invoices.xlsx");
+    QString filePath = QFileDialog::getSaveFileName(
+        this,
+        tr("Save invoices"),
+        QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation) + QDir::separator() + defaultFileName,
+        tr("Excel Files (*.xlsx);;All Files (*)") // File filters
+    );
+
+    if (filePath.isEmpty())
+    {
+        qDebug() << "cancelled";
+        return;
+    }
+
+    QApplication::setOverrideCursor(Qt::WaitCursor);  // курсор "ожидание"
+
+    using namespace QXlsx;
+    Document doc;
+
+    for (const auto& student : sortedStudents)
+    {
+        if (!acc2.contains(student.first))
+            continue;
+
+        const QString className = allStudents.value(student.first);
+        doc.addSheet(student.second);
+        doc.write(1, 1, tr("%1 class").arg(className));
+        doc.write(2, 1, student.second);
+        doc.write(3, 1, tr("The inovice for period is from %1 till %2")
+            .arg(start.toString(Configuration::date_format))
+            .arg(end.toString(Configuration::date_format))
+        );
+
+        doc.write(6, 2, tr("Subject"), boldFormat);
+        doc.setColumnWidth(2, 30);
+        doc.write(6, 3, tr("Amount"), boldFormat);
+        doc.setColumnWidth(3, 14);
+        doc.write(6, 4, tr("Dates"), boldFormat);
+        doc.setColumnWidth(4, 20);
+        doc.write(6, 5, tr("Price"), boldFormat);
+        doc.setColumnWidth(5, 14);
+        doc.write(6, 6, tr("Summa"), boldFormat);
+        doc.setColumnWidth(6, 14);
+
+        int i = 6;
+        for (auto it = acc2[student.first].constBegin(); it != acc2[student.first].constEnd(); ++it)
+        {
+            doc.write(++i, 2, sections[it.key()], wrapFormat);
+            doc.setRowHeight(i, 60);
+
+            int cnt = 0;
+            QList<QPair<QDate, int>> dates;
+            for (auto itc = it.value().constBegin(); itc != it.value().constEnd(); ++itc)
+            {
+                cnt += itc.value();
+                if (itc.value() > 0)
+                    dates.append(QPair<QDate, int>(itc.key(), itc.value()));
+            }
+            std::sort(dates.begin(), dates.end(), [](auto &a, auto &b)
+            {
+                return a.first < b.first;
+            });
+            QStringList strDates;
+            for (const QPair<QDate, int>& p : dates)
+            {
+                QString date = p.first.toString(Configuration::date_format);
+                if (p.second > 1)
+                    date += QString(" (x %1)").arg(p.second);
+                strDates.append(date);
+            }
+
+            doc.write(i, 3, cnt, centred());
+            doc.write(i, 4, strDates.join("\n"), centred());
+            doc.write(i, 5, prices[it.key()], centred(moneyFormat));
+            doc.write(i, 6, QString("=C%1*E%1").arg(i), centred(moneyFormat));
+        }
+        doc.write(++i, 2, tr("Total"), boldFormat);
+        doc.mergeCells(CellRange(i, 2, i, 5));
+        if (i > 7)
+        {
+            doc.write(i, 6, QString("=SUM(F7:F%1)").arg(i - 1), moneyFormat);
+        }
+    }
+
+    doc.selectSheet(0);
+    doc.saveAs(filePath);
+
+    QApplication::restoreOverrideCursor(); // вернуть обычный курсор
+}
+
 void MainWindow::onIssueInvoices()
 {
     qDebug() << "date=" << reportCalendarWidget->selectedDate();
@@ -394,6 +537,12 @@ void MainWindow::onIssueInvoices()
         // Dialog was accepted (e.g., OK button clicked)
         qDebug() << "Custom dialog (issue invoices) accepted!";
 
+        QDate date = reportCalendarWidget->selectedDate();
+        const QDate end = QDate(date.year(), date.month(), 14);
+        QDate prevMonth = end.addMonths(-1);
+        const QDate start = QDate(prevMonth.year(), prevMonth.month(), 15);
+
+        invoices(start, end);
     } else {
         // Dialog was rejected (e.g., Cancel button clicked or closed)
         qDebug() << "Custom dialog (issue invoices) rejected!";
@@ -619,8 +768,8 @@ void MainWindow::onReportForDirector()
     for (QString className : sortedCalsses)
     {
         doc.addSheet(className);
-        doc.write(1, 1, tr("%1 класс").arg(className));
-        doc.write(2, 1, tr("Расчётный период с %1 по %2")
+        doc.write(1, 1, tr("%1 class").arg(className));
+        doc.write(2, 1, tr("The report period is from %1 till %2")
             .arg(start.toString(Configuration::date_format))
             .arg(end.toString(Configuration::date_format))
         );

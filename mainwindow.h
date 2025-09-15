@@ -27,7 +27,7 @@ public:
     explicit MainWindow(QWidget* parent = nullptr);
     ~MainWindow() override;
 
-    // [ studends map, ss_id => st_id  => дата => сумма ]
+    // [ studends map, ss_id => st_id  => дата => кол-во ]
     QPair<QMap<int, QString>, QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>>>
         scan(const QDate& date_start, const QDate& date_end);
 
@@ -53,6 +53,7 @@ private:
     CSVTableModel* pSectionsModel;
 
     QString calculateSha256Hash(const QString& filePath);
+    void invoices(const QDate& start, const QDate& end);
 
     NetworkInteraction* network;
     QAction* sendAction;
