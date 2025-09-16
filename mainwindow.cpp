@@ -4,6 +4,7 @@
 
 #include "mainwindow.h"
 #include "CustomComboBoxSortFilterProxyModel.h"
+#include "cmake-build-debug/_deps/qxlsx-src/QXlsx/header/xlsxcellrange.h"
 #include "cmake-build-debug/_deps/qxlsx-src/QXlsx/header/xlsxcellreference.h"
 #include "cmake-build-debug/_deps/qxlsx-src/QXlsx/header/xlsxformat.h"
 
@@ -53,10 +54,22 @@ std::pair<T1,T2> toStdPair(const QPair<T1,T2>& qp) {
 #define LASTDATE_FILENAME   "last-date.txt"
 static LastAttendanceDate gl_lastAttendanceDate = LastAttendanceDate(LASTDATE_FILENAME);
 
-QXlsx::Format centred(QXlsx::Format format = QXlsx::Format())
+QXlsx::Format center(QXlsx::Format format = QXlsx::Format())
 {
     format.setVerticalAlignment(QXlsx::Format::AlignVCenter);
     format.setHorizontalAlignment(QXlsx::Format::AlignHCenter);
+    return format;
+}
+
+QXlsx::Format right(QXlsx::Format format = QXlsx::Format())
+{
+    format.setHorizontalAlignment(QXlsx::Format::AlignRight);
+    return format;
+}
+
+QXlsx::Format small(QXlsx::Format format = QXlsx::Format())
+{
+    format.setFontSize(8);
     return format;
 }
 
@@ -67,7 +80,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     boldFormat.setFontBold(true);
     wrapFormat.setTextWrap(true);
-    wrapFormat = centred(wrapFormat);
+    wrapFormat = center(wrapFormat);
     moneyFormat.setNumberFormat("₽#,##0");
 
     // Tabs
@@ -433,27 +446,8 @@ void MainWindow::invoices(const QDate& start, const QDate& end)
     QMap<int, QString> allStudents = pStudentsModel->dictionary(2);
     // todo: check that names in reportStudents and allStudents are the same
 
-    QApplication::restoreOverrideCursor(); // вернуть обычный курсор
 
-    const QString defaultFileName =
-        QDate::currentDate().toString("yyyy-MM-dd") + tr("-invoices.xlsx");
-    QString filePath = QFileDialog::getSaveFileName(
-        this,
-        tr("Save invoices"),
-        QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation) + QDir::separator() + defaultFileName,
-        tr("Excel Files (*.xlsx);;All Files (*)") // File filters
-    );
-
-    if (filePath.isEmpty())
-    {
-        qDebug() << "cancelled";
-        return;
-    }
-
-    QApplication::setOverrideCursor(Qt::WaitCursor);  // курсор "ожидание"
-
-    using namespace QXlsx;
-    Document doc;
+    const QString datePrefix = QDate::currentDate().toString("yyyy-MM-dd");
 
     for (const auto& student : sortedStudents)
     {
@@ -461,30 +455,46 @@ void MainWindow::invoices(const QDate& start, const QDate& end)
             continue;
 
         const QString className = allStudents.value(student.first);
-        doc.addSheet(student.second);
-        doc.write(1, 1, tr("%1 class").arg(className));
-        doc.write(2, 1, student.second);
-        doc.write(3, 1, tr("The inovice for period is from %1 till %2")
+
+        const QString filePath =
+            QStandardPaths::writableLocation(QStandardPaths::DocumentsLocation) +
+            QDir::separator() +
+            datePrefix + "-" + className + "-" +
+            QString(student.second).replace(" ", "_") +
+            ".xlsx";
+        logger->appendLog(tr("Creating invoice for %1").arg(student.second));
+
+        using namespace QXlsx;
+        Document doc;
+
+        //doc.addSheet(student.second);
+        //doc.currentWorksheet()->... pageOrientation
+        // see: QString WorksheetPrivate::Porientation;
+        // pagesetup and print settings add by liufeijin 20181028, liufeijin
+
+        doc.write(1, 2, student.second, boldFormat);
+        if (!className.isEmpty())
+            doc.write(1, 4, tr("%1 class").arg(className));
+        doc.setColumnWidth(1, 3);
+        doc.write(2, 2, tr("The inovice for period is from %1 till %2")
             .arg(start.toString(Configuration::date_format))
             .arg(end.toString(Configuration::date_format))
         );
 
-        doc.write(6, 2, tr("Subject"), boldFormat);
-        doc.setColumnWidth(2, 30);
-        doc.write(6, 3, tr("Amount"), boldFormat);
-        doc.setColumnWidth(3, 14);
-        doc.write(6, 4, tr("Dates"), boldFormat);
-        doc.setColumnWidth(4, 20);
-        doc.write(6, 5, tr("Price"), boldFormat);
-        doc.setColumnWidth(5, 14);
-        doc.write(6, 6, tr("Summa"), boldFormat);
-        doc.setColumnWidth(6, 14);
+        doc.write(4, 2, tr("Subject"), center(boldFormat));
+        doc.setColumnWidth(2, 20);
+        doc.write(4, 3, tr("Amount"), center(boldFormat));
+        doc.setColumnWidth(3, 8);
+        doc.write(4, 4, tr("Dates"), center(boldFormat));
+        doc.setColumnWidth(4, 16);
+        doc.write(4, 5, tr("Price"), center(boldFormat));
+        doc.write(4, 6, tr("Summa"), center(boldFormat));
+        doc.setColumnWidth(6, 12);
 
-        int i = 6;
+        int i = 4;
         for (auto it = acc2[student.first].constBegin(); it != acc2[student.first].constEnd(); ++it)
         {
-            doc.write(++i, 2, sections[it.key()], wrapFormat);
-            doc.setRowHeight(i, 60);
+            doc.write(++i, 2, sections[it.key()], small(wrapFormat));
 
             int cnt = 0;
             QList<QPair<QDate, int>> dates;
@@ -507,21 +517,24 @@ void MainWindow::invoices(const QDate& start, const QDate& end)
                 strDates.append(date);
             }
 
-            doc.write(i, 3, cnt, centred());
-            doc.write(i, 4, strDates.join("\n"), centred());
-            doc.write(i, 5, prices[it.key()], centred(moneyFormat));
-            doc.write(i, 6, QString("=C%1*E%1").arg(i), centred(moneyFormat));
-        }
-        doc.write(++i, 2, tr("Total"), boldFormat);
-        doc.mergeCells(CellRange(i, 2, i, 5));
-        if (i > 7)
-        {
-            doc.write(i, 6, QString("=SUM(F7:F%1)").arg(i - 1), moneyFormat);
-        }
-    }
+            if (!strDates.isEmpty())
+                doc.setRowHeight(i, 16 * strDates.size());
 
-    doc.selectSheet(0);
-    doc.saveAs(filePath);
+            doc.write(i, 3, cnt, center());
+            doc.write(i, 4, strDates.join(", \r\n"), center());
+            doc.write(i, 5, prices[it.key()], center(moneyFormat));
+            doc.write(i, 6, QString("=C%1*E%1").arg(i), center(moneyFormat));
+        }
+        doc.write(++i, 2, tr("Total"), right(boldFormat));
+        doc.mergeCells(CellRange(i, 2, i, 5));
+        if (i > 4)
+        {
+            doc.write(i, 6, QString("=SUM(F6:F%1)").arg(i - 1), center(moneyFormat));
+        }
+
+        logger->appendLog(tr("Saving invoice for %1 into file %2.").arg(student.second).arg(filePath));
+        doc.saveAs(filePath);
+    }
 
     QApplication::restoreOverrideCursor(); // вернуть обычный курсор
 }
@@ -640,23 +653,31 @@ void MainWindow::onReportForTeacher()
     for (auto it = sortedTeachers.constBegin(); it != sortedTeachers.constEnd(); ++it)
     {
         doc.addSheet(it->second);
-        doc.write(1, 1, it->second);
+        doc.write(1, 1, it->second, boldFormat);
         doc.write(2, 1, tr("Расчётный период с %1 по %2")
             .arg(start.toString(Configuration::date_format))
             .arg(end.toString(Configuration::date_format))
         );
 
-        doc.write(4, 1, tr("Class"), boldFormat);
+        doc.write(4, 1, tr("Class"), center(boldFormat));
+        doc.write(4, 2, tr("Total"), center(boldFormat));
         doc.write(4, 3, tr("Subject name"), boldFormat);
-        doc.write(5, 2, tr("Total"), boldFormat);
-        //doc.currentWorksheet()->mergeCells(CellRange("B4:B6"));
-        doc.mergeCells(CellRange("A4:A6"));
-        doc.mergeCells(CellRange("B5:B6"));
-        int j = 3;
+        doc.mergeCells(CellRange(4, 1, 5, 1));
+        doc.mergeCells(CellRange(4, 2, 5, 2));
 
+        int j = 3;
+        for (auto itss = acc.constBegin(); itss != acc.constEnd(); ++itss)
+        {
+            doc.write(4, j, itss.value().first, wrapFormat);
+            doc.setRowHeight(4, 60);
+            doc.mergeCells(CellRange(4, j, 4, j+1));
+            doc.write(5, j, tr("Amount"));
+            doc.write(5, j+1, tr("Summa"));
+            j += 2;
+        }
 
         QStringList total;
-        int i = 6;
+        int i = 5;
         for (auto cls : sortedCalsses)
         {
             doc.write(++i, 1, cls.second);
@@ -665,12 +686,6 @@ void MainWindow::onReportForTeacher()
             QStringList total;
             for (auto itss = acc.constBegin(); itss != acc.constEnd(); ++itss)
             {
-                doc.write(5, j, itss.value().first, wrapFormat);
-                doc.setRowHeight(5, 60);
-                doc.mergeCells(CellRange(5, j, 5, j+1));
-                doc.write(6, j, tr("Amount"));
-                doc.write(6, j+1, tr("Summa"));
-
                 bool ok = false;
                 double price = prices[itss.key()].toDouble(&ok);
                 if (ok)
@@ -685,7 +700,7 @@ void MainWindow::onReportForTeacher()
 
                 int sum = 0;
                 // TODO
-                doc.write(i, j, 1234);
+                doc.write(i, j, 1);
                 /*
                 for (int v : itss.value().second[student.first])
                     sum += v;
@@ -714,7 +729,9 @@ void MainWindow::onReportForDirector()
     qDebug() << start << " - " << end;
 
     logger->writeTimestamp(
-        tr("Creating the director's report from %1 till %2").arg(start.toString(Configuration::date_format)).arg(end.toString(Configuration::date_format))
+        tr("Creating the director's report from %1 till %2")
+            .arg(start.toString(Configuration::date_format))
+            .arg(end.toString(Configuration::date_format))
     );
 
     QApplication::setOverrideCursor(Qt::WaitCursor);  // курсор "ожидание"
@@ -768,18 +785,20 @@ void MainWindow::onReportForDirector()
     for (QString className : sortedCalsses)
     {
         doc.addSheet(className);
-        doc.write(1, 1, tr("%1 class").arg(className));
-        doc.write(2, 1, tr("The report period is from %1 till %2")
+
+        doc.write(1, 1, tr("%1 class").arg(className), boldFormat);
+        doc.write(1, 2, tr("The report period is from %1 till %2")
             .arg(start.toString(Configuration::date_format))
             .arg(end.toString(Configuration::date_format))
         );
-        doc.write(4, 1, tr("Full name"), boldFormat);
-        doc.setColumnWidth(1, 30);
-        doc.write(4, 3, tr("Subject name"), boldFormat);
-        doc.write(5, 2, tr("Total"), boldFormat);
-        //doc.currentWorksheet()->mergeCells(CellRange("B4:B6"));
-        doc.mergeCells(CellRange("A4:A6"));
-        doc.mergeCells(CellRange("B5:B6"));
+        doc.write(3, 1, tr("Full name"), center(boldFormat));
+        doc.mergeCells(CellRange(3, 1, 5, 1));
+        doc.setColumnWidth(1, 20);
+        doc.write(3, 2, tr("Total"), center(boldFormat));
+        doc.mergeCells(CellRange(3, 2, 5, 2));
+        doc.write(3, 3, tr("Subject name"), center(boldFormat));
+        doc.setRowHeight(4, 50);
+        doc.setRowHeight(5, 32);
 
         QList<QPair<int, QString>> sortedStudents;
         for (int studentCode : studentsByClasses[className])
@@ -793,7 +812,19 @@ void MainWindow::onReportForDirector()
             return a.second.compare(b.second, Qt::CaseInsensitive) < 0;
         });
 
-        int i = 6;
+        int j = 2;
+        for (auto itss = acc.constBegin(); itss != acc.constEnd(); ++itss)
+        {
+            doc.write(4, ++j, itss.value().first, small(wrapFormat));
+            doc.mergeCells(CellRange(4, j, 4, j+1));
+            doc.write(5, j, tr("Amount"), wrapFormat);
+            doc.setColumnWidth(j, 6);
+            doc.write(5, ++j, tr("Summa"), wrapFormat);
+            doc.setColumnWidth(j, 7);
+        }
+        doc.mergeCells(CellRange(3, 3, 3, j));
+
+        int i = 5;
         for (auto student : sortedStudents)
         {
             doc.write(++i, 1, student.second);
@@ -802,17 +833,14 @@ void MainWindow::onReportForDirector()
             QStringList total;
             for (auto itss = acc.constBegin(); itss != acc.constEnd(); ++itss)
             {
-                doc.write(5, j, itss.value().first, wrapFormat);
-                doc.setRowHeight(5, 60);
-                doc.mergeCells(CellRange(5, j, 5, j+1));
-                doc.write(6, j, tr("Amount"));
-                doc.write(6, j+1, tr("Summa"));
-
                 bool ok = false;
                 double price = prices[itss.key()].toDouble(&ok);
                 if (ok)
                 {
-                    doc.write(i, j+1, QString("=%1*%2").arg(QXlsx::CellReference(i, j).toString()).arg(price), moneyFormat);
+                    doc.write(i, j+1,
+                        QString("=%1*%2").arg(QXlsx::CellReference(i, j).toString()).arg(price),
+                        small(moneyFormat)
+                    );
                     total += QXlsx::CellReference(i, j+1).toString();
                 } else
                 {
@@ -823,12 +851,12 @@ void MainWindow::onReportForDirector()
                 int sum = 0;
                 for (int v : itss.value().second[student.first])
                     sum += v;
-                doc.write(i, j, sum);
+                doc.write(i, j, sum, small());
                 j += 2;
             }
             doc.write(i, 2, total.join("+").prepend("="), moneyFormat);
         }
-        doc.write(i+1, 2, QString("=sum(B7:B%1)").arg(i), moneyFormat);
+        doc.write(i+1, 2, QString("=SUM(B7:B%1)").arg(i), moneyFormat);
     }
 
     doc.selectSheet(0);
