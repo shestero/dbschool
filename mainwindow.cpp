@@ -521,7 +521,7 @@ void MainWindow::invoices(const QDate& start, const QDate& end)
                 doc.setRowHeight(i, 16 * strDates.size());
 
             doc.write(i, 3, cnt, center());
-            doc.write(i, 4, strDates.join(", \r\n"), center());
+            doc.write(i, 4, strDates.join(", \r\n"), wrapFormat);
             doc.write(i, 5, prices[it.key()], center(moneyFormat));
             doc.write(i, 6, QString("=C%1*E%1").arg(i), center(moneyFormat));
         }
