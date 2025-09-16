@@ -527,9 +527,9 @@ void MainWindow::invoices(const QDate& start, const QDate& end)
         }
         doc.write(++i, 2, tr("Total"), right(boldFormat));
         doc.mergeCells(CellRange(i, 2, i, 5));
-        if (i > 4)
+        if (i > 5)
         {
-            doc.write(i, 6, QString("=SUM(F6:F%1)").arg(i - 1), center(moneyFormat));
+            doc.write(i, 6, QString("=SUM(F5:F%1)").arg(i - 1), center(moneyFormat));
         }
 
         logger->appendLog(tr("Saving invoice for %1 into file %2.").arg(student.second).arg(filePath));
