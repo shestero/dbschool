@@ -32,6 +32,7 @@ public:
     void save();
 
     QMap<int, QString> dictionary(int titleCol = 1) const;
+    QMap<int, int> codeDictionary(int titleCol = 1) const;
 };
 
 

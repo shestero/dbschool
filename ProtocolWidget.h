@@ -41,7 +41,7 @@ public slots:
 
     void writeTimestamp(const QString& title = "")
     {
-        textEdit->append(QString("<font color='green'>%1 <b>%2</b></font>")
+        textEdit->append(QString("<font color='blue'>%1 <b>%2</b></font>")
                          .arg(
                              QDateTime::currentDateTime().toString("dd.MM.yyyy hh:mm:ss")
                          )

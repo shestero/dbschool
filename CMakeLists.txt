@@ -61,9 +61,6 @@ add_executable(dbschool1
         ProtocolDialog.cpp
         ProtocolDialog.h
         Worker.h
-        generatetables.ui
-        generatetables.cpp
-        generatetables.h
         generateinvoices.cpp
         generateinvoices.h
         generateinvoices.ui

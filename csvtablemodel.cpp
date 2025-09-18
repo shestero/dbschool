@@ -12,6 +12,7 @@
 #include <QFile>
 #include <QTextStream>
 #include <QDebug>
+#include <qt5/QtCore/qnamespace.h>
 //#include <qt5/QtCore/qnamespace.h>
 
 CSVTableModel::CSVTableModel(QObject *parent, const QString& file_name):
@@ -179,6 +180,43 @@ QMap<int, QString> CSVTableModel::dictionary(int titleCol) const
             continue;
         }
         ret.insert(key, secondary->text());
+    }
+    return ret;
+}
+
+QMap<int, int> CSVTableModel::codeDictionary(int titleCol) const
+{
+    QMap<int, int> ret;
+    for (int i = 0; i < rowCount(); i++)
+    {
+        auto primary = item(i, 0);
+        if (!primary)
+        {
+            qWarning() << "Warning: no item for the primary column of row" << i <<
+                "at file" << file_name;
+            continue;
+        }
+
+        bool ok = false;
+        int key = primary->text().toInt(&ok);
+        if (!ok)
+        {
+            qWarning() << "Warning: cannot parse key from the primary column of row" << i <<
+                "at file" << file_name;
+            qDebug() << "It's value" << primary->text();
+            continue;
+        }
+        auto secondary = item(i, titleCol);
+        if (!secondary)
+        {
+            qWarning() << "Warning: no item for the secondary column (" << titleCol << ") of row" << i <<
+                "at file" << file_name;
+            continue;
+        }
+
+        int idx = secondary->data(Qt::UserRole).toInt(&ok);
+        if (ok)
+            ret.insert(key, idx);
     }
     return ret;
 }

@@ -8,6 +8,8 @@
 #include "cmake-build-debug/_deps/qxlsx-src/QXlsx/header/xlsxcellreference.h"
 #include "cmake-build-debug/_deps/qxlsx-src/QXlsx/header/xlsxformat.h"
 
+#include <qt5/QtWidgets/qmainwindow.h>
+#include <qt5/QtWidgets/qtoolbar.h>
 #include <tuple>
 #include <utility>
 template<typename T1, typename T2>
@@ -21,7 +23,6 @@ std::pair<T1,T2> toStdPair(const QPair<T1,T2>& qp) {
 #include "NetworkInteraction.h"
 #include "csvtablemodel.h"
 #include "generateinvoices.h"
-#include "generatetables.h"
 #include "tableview.h"
 #include "ForeignKeyDelegate.h"
 #include "ProtocolDialog.h"
@@ -133,7 +134,7 @@ MainWindow::MainWindow(QWidget *parent) :
     // Tool bars
     QToolBar *toolBar;
     QLabel *label;
-    toolBar = addToolBar(tr("Attendance tools"));
+    addToolBar(/* Qt::LeftToolBarArea, */ toolBar = new QToolBar(tr("Attendance tools")));
     toolBar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
     label = new QLabel(tr("Attendance:"));
     label->setStyleSheet("QLabel { text-decoration: underline; padding-right: 10px; }"); // 5.14+ ?
@@ -146,7 +147,7 @@ MainWindow::MainWindow(QWidget *parent) :
     toolBar->addAction(refreshStudentAction);
 
     addToolBarBreak();
-    toolBar = addToolBar(tr("Report tools"));
+    addToolBar(/* Qt::LeftToolBarArea, */ toolBar = new QToolBar(tr("Report tools")));
     toolBar->setToolButtonStyle(Qt::ToolButtonTextBesideIcon);
     label = new QLabel(tr("Reports:"));
     label->setStyleSheet("QLabel { text-decoration: underline; padding-right: 10px; }"); // 5.14+ ?
@@ -233,6 +234,7 @@ QPair<QMap<int, QString>, QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>>
                     students[st_id] = av.at(0);
 
                 int j = 0;
+                // TODO: swap max and min
                 const QDate minDate = std::min(attendance.date_min, date_start);
                 const QDate maxDate = std::max(attendance.date_max, date_end);
                 for (QDate d = minDate; d <= maxDate; d = d.addDays(1)) {
@@ -271,7 +273,7 @@ QPair<QMap<int, QString>, QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>>
 void MainWindow::onCreateAttendanceTables()
 {
     QDate date = gl_lastAttendanceDate.get();
-    const QDate searchDate = date.addDays(-Configuration().window_days); // Ищем учеников по курсам за последние 100 дней // TODO
+    const QDate searchDate = date.addDays(-Configuration().window_days);
 
     logger->writeTimestamp(
         tr("Creating tables by attendances from %1").arg(searchDate.toString(Configuration::date_format))
@@ -286,35 +288,7 @@ void MainWindow::onCreateAttendanceTables()
 
     }
 
-    /*
-    date = date.addDays(1);
-    gl_lastAttendanceDate.set(date);
-
-    GenerateTables* dialog = new GenerateTables(date, this);
-
-    int result = dialog->exec(); // Show the dialog modally
-
-    if (result == QDialog::Accepted) {
-        // Dialog was accepted (e.g., OK button clicked)
-        qDebug() << "Custom dialog accepted!";
-
-    } else {
-        // Dialog was rejected (e.g., Cancel button clicked or closed)
-        qDebug() << "Custom dialog rejected!";
-    }
-
-    dialog->deleteLater();
-    */
-}
-
-// todo
-template<typename T>
-inline QFuture<T> makeReadyFuture(const T &value) {
-    QFutureInterface<T> iface;
-    iface.reportStarted();
-    iface.reportResult(value);
-    iface.reportFinished();
-    return iface.future();
+    // TODO ...
 }
 
 void MainWindow::onSendAttendanceTables()
@@ -418,10 +392,10 @@ void MainWindow::invoices(const QDate& start, const QDate& end)
     std::tie(reportStudents, acc) = toStdPair(scan(start, end));
 
     // st_id => ss_id => дата => кол-во
-    QMap<int, QMap<int, QMap<QDate, int>>> acc2; // todo
+    QMap<int, QMap<int, const QMap<QDate, int>*>> acc2;
     for (auto i1 = acc.constBegin(); i1 != acc.constEnd(); ++i1)
         for (auto i2 = i1.value().second.constBegin(); i2 != i1.value().second.constEnd(); ++i2)
-            acc2[i2.key()][i1.key()] = i2.value();
+            acc2[i2.key()][i1.key()] = &i2.value();
 
     // Классы
     QMap<int, QString> allClasses = pClassesModel->dictionary();
@@ -498,7 +472,7 @@ void MainWindow::invoices(const QDate& start, const QDate& end)
 
             int cnt = 0;
             QList<QPair<QDate, int>> dates;
-            for (auto itc = it.value().constBegin(); itc != it.value().constEnd(); ++itc)
+            for (auto itc = it.value()->constBegin(); itc != it.value()->constEnd(); ++itc)
             {
                 cnt += itc.value();
                 if (itc.value() > 0)
@@ -582,11 +556,16 @@ void MainWindow::onReportForTeacher()
     QApplication::setOverrideCursor(Qt::WaitCursor);  // курсор "ожидание"
 
     QMap<int, QString> reportStudents;
-    QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>> acc;
+    QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>> acc; // ss_id => st_id  => дата => кол-во
     std::tie(reportStudents, acc) = toStdPair(scan(start, end));
 
-    // Цены за занятия
-    QMap<int, QString> prices = pSectionsModel->dictionary(2);
+    QMap<int, QString> prices = pSectionsModel->dictionary(2); // Цены за занятия
+    QMap<int, int> sectionsToTeachers = pSectionsModel->codeDictionary(3);
+    QMap<int, QSet<int>> sectionsByTeacher;
+    for (auto it = sectionsToTeachers.constBegin(); it != sectionsToTeachers.constEnd(); ++it)
+    {
+        sectionsByTeacher[it.value()].insert(it.key());
+    }
 
     QApplication::restoreOverrideCursor(); // вернуть обычный курсор
 
@@ -623,9 +602,9 @@ void MainWindow::onReportForTeacher()
     });
 
     // В каких классах учатся эти ученики?
-    QMap<int, QString> allStudents = pStudentsModel->dictionary(2);
+    QMap<int, int> allStudents = pStudentsModel->codeDictionary(2);
     // todo: check that names in reportStudents and allStudents are the same
-    QMap<QString, QSet<int>> studentsByClasses;
+    QMap<int, QSet<int>> studentsByClasses;
     for (auto it = allStudents.constBegin(); it != allStudents.constEnd(); ++it)
     {
         if (reportStudents.contains(it.key()))
@@ -636,81 +615,114 @@ void MainWindow::onReportForTeacher()
     Document doc;
 
     QMap<int, QString> allClasses = pClassesModel->dictionary();
-    QList<QPair<int, QString>> sortedCalsses;
-    for (auto it = allClasses.constBegin(); it != allClasses.constEnd(); ++it)
-    {
-        if (studentsByClasses.keys().contains(it.value())) // filter the classes mentioned in report only
-            sortedCalsses.append(QPair<int, QString>(it.key(), it.value()));
-    }
-    std::sort(sortedCalsses.begin(), sortedCalsses.end(), [](QPair<int, QString>& a, QPair<int, QString>& b)
-    {
-        if (a.second == b.second)
-            return a.first < b.first;
-        return CustomComboBoxSortFilterProxyModel::lessThan(a.second, b.second);
-    });
 
     // Перебор учителей
-    for (auto it = sortedTeachers.constBegin(); it != sortedTeachers.constEnd(); ++it)
+    for (auto itth = sortedTeachers.constBegin(); itth != sortedTeachers.constEnd(); ++itth)
     {
-        doc.addSheet(it->second);
-        doc.write(1, 1, it->second, boldFormat);
-        doc.write(2, 1, tr("Расчётный период с %1 по %2")
-            .arg(start.toString(Configuration::date_format))
-            .arg(end.toString(Configuration::date_format))
-        );
+        const QSet<int>& sections = sectionsByTeacher[itth->first];
+        qDebug() << "th" << *itth << "sections" << sections;
+        if (sections.isEmpty())
+            continue;
 
-        doc.write(4, 1, tr("Class"), center(boldFormat));
-        doc.write(4, 2, tr("Total"), center(boldFormat));
-        doc.write(4, 3, tr("Subject name"), boldFormat);
-        doc.mergeCells(CellRange(4, 1, 5, 1));
-        doc.mergeCells(CellRange(4, 2, 5, 2));
-
-        int j = 3;
-        for (auto itss = acc.constBegin(); itss != acc.constEnd(); ++itss)
+        QList<QPair<int, QString>> sortedCalsses;
+        for (auto itcl = allClasses.constBegin(); itcl != allClasses.constEnd(); ++itcl)
         {
-            doc.write(4, j, itss.value().first, wrapFormat);
-            doc.setRowHeight(4, 60);
-            doc.mergeCells(CellRange(4, j, 4, j+1));
-            doc.write(5, j, tr("Amount"));
-            doc.write(5, j+1, tr("Summa"));
-            j += 2;
+            // filter the classes mentioned in report only and those that are in teacher's sections
+            if (studentsByClasses.keys().contains(itcl.key()))
+                sortedCalsses.append(QPair<int, QString>(itcl.key(), itcl.value()));
         }
+
+        std::sort(sortedCalsses.begin(), sortedCalsses.end(), [](QPair<int, QString>& a, QPair<int, QString>& b)
+        {
+            if (a.second == b.second)
+                return a.first < b.first;
+            return CustomComboBoxSortFilterProxyModel::lessThan(a.second, b.second);
+        });
 
         QStringList total;
         int i = 5;
         for (auto cls : sortedCalsses)
         {
-            doc.write(++i, 1, cls.second);
-
-            int j = 3;
+            i++;
             QStringList total;
+            QMap<int, int> sums;
             for (auto itss = acc.constBegin(); itss != acc.constEnd(); ++itss)
             {
-                bool ok = false;
-                double price = prices[itss.key()].toDouble(&ok);
-                if (ok)
-                {
-                    doc.write(i, j+1, QString("=%1*%2").arg(QXlsx::CellReference(i, j).toString()).arg(price), moneyFormat);
-                    total += QXlsx::CellReference(i, j+1).toString();
-                } else
-                {
-                    qWarning() << "No price for" << itss.value().first;
-                    doc.write(i, j+1, "?");
-                }
+                if (!sections.contains(itss.key()))
+                    continue;
 
-                int sum = 0;
-                // TODO
-                doc.write(i, j, 1);
-                /*
-                for (int v : itss.value().second[student.first])
-                    sum += v;
-                doc.write(i, j, sum);
-                */
+                for (int st_id : studentsByClasses[cls.first])
+                    for (int v : itss.value().second[st_id])
+                    {
+                        if (i == 6)
+                        {
+                            doc.addSheet(itth->second);
+                        }
+                        sums[itss.key()] += v;
+                    }
+            }
+            if (sums.isEmpty()) {
+                i--;
+            } else {
+                int j = 3;
+                for (auto itss = acc.constBegin(); itss != acc.constEnd(); ++itss)
+                {
+                    if (!sections.contains(itss.key()))
+                        continue;
+
+                    bool ok = false;
+                    double price = prices[itss.key()].toDouble(&ok);
+                    if (ok)
+                    {
+                        doc.write(i, j+1, QString("=%1*%2").arg(QXlsx::CellReference(i, j).toString()).arg(price), moneyFormat);
+                        total += QXlsx::CellReference(i, j+1).toString();
+                    } else
+                    {
+                        qWarning() << "No price for" << itss.value().first;
+                        doc.write(i, j+1, "?");
+                    }
+
+                    doc.write(i, 1, cls.second);
+                    doc.write(i, 2, total.join("+").prepend("="), moneyFormat);
+                    doc.write(i, j, sums[itss.key()]);
+
+                    j += 2;
+                }
+            }
+        }
+
+        if (i > 5)
+        {
+            doc.write(1, 1, itth->second, boldFormat);
+            doc.write(2, 1, tr("Расчётный период с %1 по %2")
+                .arg(start.toString(Configuration::date_format))
+                .arg(end.toString(Configuration::date_format))
+            );
+
+            doc.write(4, 1, tr("Class"), center(boldFormat));
+            doc.write(4, 2, tr("Total"), center(boldFormat));
+            doc.write(4, 3, tr("Subject name"), boldFormat);
+            doc.mergeCells(CellRange(4, 1, 5, 1));
+            doc.mergeCells(CellRange(4, 2, 5, 2));
+
+            int j = 3;
+            for (auto itss = acc.constBegin(); itss != acc.constEnd(); ++itss)
+            {
+                if (!sections.contains(itss.key()))
+                    continue;
+
+                doc.write(4, j, itss.value().first, wrapFormat);
+                doc.setRowHeight(4, 60);
+                doc.mergeCells(CellRange(4, j, 4, j+1));
+                doc.write(5, j, tr("Amount"));
+                doc.write(5, j+1, tr("Summa"));
                 j += 2;
             }
-            doc.write(i, 2, total.join("+").prepend("="), moneyFormat);
+            if (i > 6)
+            {
+                doc.write(i+1, 2, QString("=sum(B7:B%1)").arg(i), moneyFormat);
+            }
         }
-        doc.write(i+1, 2, QString("=sum(B7:B%1)").arg(i), moneyFormat);
     }
 
     doc.selectSheet(0);
