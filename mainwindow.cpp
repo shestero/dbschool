@@ -234,9 +234,8 @@ QPair<QMap<int, QString>, QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>>
                     students[st_id] = av.at(0);
 
                 int j = 0;
-                // TODO: swap max and min
-                const QDate minDate = std::min(attendance.date_min, date_start);
-                const QDate maxDate = std::max(attendance.date_max, date_end);
+                const QDate minDate = std::max(attendance.date_min, date_start);
+                const QDate maxDate = std::min(attendance.date_max, date_end);
                 for (QDate d = minDate; d <= maxDate; d = d.addDays(1)) {
                     const QString& s = av.value(++j, ""); // нулевой элемет содержит ФИО - тут пропускаем
                     if (s.isEmpty())
@@ -280,7 +279,7 @@ void MainWindow::onCreateAttendanceTables()
     );
 
     QMap<int, QString> _students;
-    QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>> acc;
+    QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>> acc;  // ss_id => st_id => дата => кол-во
     std::tie(_students, acc) = toStdPair(scan(searchDate, QDate::currentDate()));
     qDebug() << "acc.size=" << acc.size();
     for (auto it = acc.constBegin(); it != acc.constEnd(); ++it) {
@@ -289,6 +288,7 @@ void MainWindow::onCreateAttendanceTables()
     }
 
     // TODO ...
+    // !!!
 }
 
 void MainWindow::onSendAttendanceTables()
@@ -419,7 +419,6 @@ void MainWindow::invoices(const QDate& start, const QDate& end)
     // В каких классах учатся эти ученики?
     QMap<int, QString> allStudents = pStudentsModel->dictionary(2);
     // todo: check that names in reportStudents and allStudents are the same
-
 
     const QString datePrefix = QDate::currentDate().toString("yyyy-MM-dd");
 
@@ -720,7 +719,7 @@ void MainWindow::onReportForTeacher()
             }
             if (i > 6)
             {
-                doc.write(i+1, 2, QString("=sum(B7:B%1)").arg(i), moneyFormat);
+                doc.write(i+1, 2, QString("=sum(B6:B%1)").arg(i), moneyFormat);
             }
         }
     }
@@ -868,7 +867,7 @@ void MainWindow::onReportForDirector()
             }
             doc.write(i, 2, total.join("+").prepend("="), moneyFormat);
         }
-        doc.write(i+1, 2, QString("=SUM(B7:B%1)").arg(i), moneyFormat);
+        doc.write(i+1, 2, QString("=SUM(B6:B%1)").arg(i), moneyFormat);
     }
 
     doc.selectSheet(0);
