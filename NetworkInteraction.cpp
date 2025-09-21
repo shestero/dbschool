@@ -12,6 +12,7 @@
 #include <QApplication>
 #include <QAuthenticator>
 #include <QEventLoop>
+#include <QDir>
 #include <QJsonArray>
 #include <QJsonDocument>
 #include <QObject>
@@ -216,25 +217,29 @@ bool NetworkInteraction::renameToBak(const QString& filePath)
     QFileInfo info(filePath);
     if (!info.exists() || !info.isFile())
     {
-        qWarning() << "Файл не существует:" << filePath;
+        qWarning() << "File not exists:" << filePath;
         return false;
     }
 
     // Новый путь с тем же именем, но расширением .bak
-    QString newFilePath = info.path() + "/" + info.completeBaseName() + ".bak";
+    QString newFilePath =
+        info.path().replace("/", QDir::separator()) +
+            QDir::separator() +
+                info.completeBaseName() + ".bak";
 
     if (QFile::exists(newFilePath))
     {
         QFile::remove(newFilePath); // если уже есть .bak — удаляем
     }
 
-    if (!QFile::rename(filePath, newFilePath))
+    QFile file(filePath);
+    if (!file.rename(newFilePath))
     {
-        qWarning() << "Ошибка переименования в" << newFilePath;
+        qWarning() << "Renaming error in" << newFilePath << file.errorString();
         return false;
     }
 
-    qDebug() << "Файл переименован в:" << newFilePath;
+    qDebug() << "File was renamed into:" << newFilePath;
     return true;
 }
 
@@ -242,24 +247,27 @@ bool NetworkInteraction::deleteFile(const QString& filePath)
 {
     if (QFile::exists(filePath))
     {
-        if (QFile::remove(filePath))
+        QFile file(filePath);
+        if (file.remove())
         {
-            qDebug() << "Файл удалён:" << filePath;
+            qDebug() << "File was deleted:" << filePath;
             return true;
         }
-        qDebug() << "Не удалось удалить файл:" << filePath;
+        qCritical() << "Cannot delete the file:" << filePath << file.errorString();
     }
     else
     {
-        qDebug() << "Файл не найден:" << filePath;
+        qWarning() << "File not found:" << filePath;
     }
     return false;
 }
 
 void NetworkInteraction::sendTable(const QString& file_name)
 {
-    auto url = api(QString("attendance/%1").arg(file_name));
-    QString filename = QString("attendance/outbox/%1").arg(file_name);
+    auto url = api(QString("attendance/") + file_name);
+    QString filename = QString("attendance%1outbox%1%2").arg(QDir::separator()).arg(file_name);
+    qDebug() << "file table to send" << filename;
+    printf("file to send %s", filename.toLocal8Bit().constData()); // todo!
 
     QFile file(filename);
     if (!file.open(QIODevice::ReadOnly))
@@ -279,6 +287,7 @@ void NetworkInteraction::sendTable(const QString& file_name)
 
     if (response == "OK")
     {
+        file.close();
         emit appendLog(tr("\t- file sent"));
         if (!renameToBak(filename))
         {
@@ -405,7 +414,7 @@ void NetworkInteraction::receiveTables()
             continue;
         }
 
-        QString outputName = QString("attendance/inbox/") + fileName;
+        QString outputName = QString("attendance%1inbox%1%2").arg(QDir::separator()).arg(fileName);
         QFile file(outputName);
         if (file.open(QIODevice::WriteOnly | QIODevice::Text))
         {

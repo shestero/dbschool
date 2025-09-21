@@ -224,13 +224,13 @@ QPair<QMap<int, QString>, QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>>
 
         try
         {
-            QString filename = QString("attendance/inbox/%1").arg(file);
+            QString filename = QString("attendance%1inbox%1%2").arg(QDir::separator()).arg(file);
             Attendance attendance(filename);
-            qDebug() << "attendance.students.size=" << attendance.students.size();
+            //qDebug() << "attendance.students.size=" << attendance.students.size();
             for (int st_id : attendance.students.keys())
             {
                 const QVector<QString>& av = attendance.students[st_id];
-                qDebug() << "av=" << av;
+                //qDebug() << "av=" << av;
                 if (!av.isEmpty())
                     students[st_id] = av.at(0);
 
@@ -331,7 +331,8 @@ void MainWindow::onCreateAttendanceTables()
             );
         }
         QString file_name =
-            QString("attendance/outbox/%1-%2-%3.tsv")
+            QString("attendance%1outbox%1%2-%3-%4.tsv")
+                .arg(QDir::separator())
                 .arg(th_id, 4, 10, QChar('0'))
                 .arg(it.key(), 4, 10, QChar('0'))
                 .arg(dateTimeStamp);
