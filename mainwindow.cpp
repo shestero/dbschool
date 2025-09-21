@@ -277,9 +277,19 @@ void MainWindow::onCreateAttendanceTables()
     //QDate date = reportCalendarWidget->selectedDate();
     const QDate searchDate = date.addDays(-Configuration().window_days);
 
-    const QDate end = QDate(date.year(), date.month(), 14);
-    QDate prevMonth = end.addMonths(-1);
-    const QDate start = QDate(prevMonth.year(), prevMonth.month(), 15);
+    QDate start, end;
+    bool next_month = date.day() >= 17; // Начиная с 17го числа ведомости создаются на след.месяц!
+    if (date.day() > 28) date.addDays(-4); // берегись февраля!
+    if (next_month)
+    {
+        QDate nextMonth = date.addMonths(+1);
+        start = QDate(date.year(), date.month(), 15);
+        end = QDate(nextMonth.year(), nextMonth.month(), 14);
+    } else {
+        QDate prevMonth = date.addMonths(-1);
+        start = QDate(prevMonth.year(), prevMonth.month(), 15);
+        end = QDate(date.year(), date.month(), 14);
+    }
 
     logger->writeTimestamp(
         tr("Creating tables by attendances from %1 till %2 (looking back as down to %3)")
