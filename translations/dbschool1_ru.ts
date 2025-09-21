@@ -187,7 +187,7 @@
     </message>
     <message>
         <source>Sheet_name</source>
-        <translation type="unfinished"></translation>
+        <translation>Имя_листа</translation>
     </message>
     <message>
         <source>precision</source>
@@ -215,7 +215,7 @@
     </message>
     <message>
         <source>Creating tables by attendances from %1</source>
-        <translation>Создание таблиц по посещаемости %1</translation>
+        <translation type="vanished">Создание таблиц по посещаемости %1</translation>
     </message>
     <message>
         <source>Receiving tables</source>
@@ -286,12 +286,8 @@
         <translation>Создание счетов с %1 по %2</translation>
     </message>
     <message>
-        <source>-invoices.xlsx</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Save invoices</source>
-        <translation>Сохранение счетов</translation>
+        <translation type="vanished">Сохранение счетов</translation>
     </message>
     <message>
         <source>Subject</source>
@@ -316,6 +312,30 @@
     <message>
         <source>The report period is from %1 till %2</source>
         <translation>Отчёт за период с %1 по %2</translation>
+    </message>
+    <message>
+        <source>Creating tables by attendances from %1 till %2 (looking back as down to %3)</source>
+        <translation>Создание таблиц посещаемости с %1 по %2 (на основе посещаемости с %3)</translation>
+    </message>
+    <message>
+        <source>No teacher with code %1</source>
+        <translation>Учитель с кодом %1 не найден!</translation>
+    </message>
+    <message>
+        <source>Cannot find the teacher #%1 for section %2 %3</source>
+        <translation>Не найден учитель №%1 для секции %2 %3</translation>
+    </message>
+    <message>
+        <source>Warning: No student with id %1; skiping it!</source>
+        <translation>Предупреждение: ученик №%1 не найден, пропускаем!...</translation>
+    </message>
+    <message>
+        <source>Creating invoice for %1</source>
+        <translation>Создаём счёт для %1...</translation>
+    </message>
+    <message>
+        <source>Saving invoice for %1 into file %2.</source>
+        <translation>Сохраняем счёт для %1 в файл %2</translation>
     </message>
 </context>
 <context>

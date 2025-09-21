@@ -8,14 +8,14 @@
 #include "cmake-build-debug/_deps/qxlsx-src/QXlsx/header/xlsxcellreference.h"
 #include "cmake-build-debug/_deps/qxlsx-src/QXlsx/header/xlsxformat.h"
 
-#include <qt5/QtWidgets/qmainwindow.h>
-#include <qt5/QtWidgets/qtoolbar.h>
+/*
 #include <tuple>
 #include <utility>
 template<typename T1, typename T2>
 std::pair<T1,T2> toStdPair(const QPair<T1,T2>& qp) {
     return {qp.first, qp.second};
 }
+*/
 
 #include "Attendance.h"
 #include "Configuration.h"
@@ -33,6 +33,7 @@ std::pair<T1,T2> toStdPair(const QPair<T1,T2>& qp) {
 #include <QFileDialog>
 #include <QIcon>
 #include <QLabel>
+#include <QMainWindow>
 #include <QMessageBox>
 #include <QSplitter>
 #include <QStatusBar>
@@ -287,9 +288,11 @@ void MainWindow::onCreateAttendanceTables()
             .arg(searchDate.toString(Configuration::date_format))
     );
 
-    QMap<int, QString> students;
-    QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>> acc;  // ss_id => st_id => дата => кол-во
-    std::tie(students, acc) = toStdPair(scan(searchDate, QDate::currentDate()));
+    //std::tie(students, acc) = toStdPair(scan(searchDate, QDate::currentDate()));
+    auto pair = scan(searchDate, QDate::currentDate());
+    QMap<int, QString>& students = pair.first;
+    QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>>& acc = pair.second; // ss_id => st_id => дата => кол-во
+
     qDebug() << "acc.size=" << acc.size();
 
     QMap<int, int> sections2Teachers = pSectionsModel->codeDictionary(3);
@@ -471,10 +474,11 @@ void MainWindow::invoices(const QDate& start, const QDate& end)
 
     QApplication::setOverrideCursor(Qt::WaitCursor);  // курсор "ожидание"
 
-    // [ studends map, ss_id => st_id => дата => кол-во ]
-    QMap<int, QString> reportStudents;
-    QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>> acc;
-    std::tie(reportStudents, acc) = toStdPair(scan(start, end));
+    //std::tie(reportStudents, acc) = scan(start, end);
+    auto pair = scan(start, end);
+    QMap<int, QString>& reportStudents = pair.first;
+    QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>>& acc = pair.second; // ss_id => st_id => дата => кол-во
+
 
     // st_id => ss_id => дата => кол-во
     QMap<int, QMap<int, const QMap<QDate, int>*>> acc2;
@@ -639,9 +643,10 @@ void MainWindow::onReportForTeacher()
 
     QApplication::setOverrideCursor(Qt::WaitCursor);  // курсор "ожидание"
 
-    QMap<int, QString> reportStudents;
-    QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>> acc; // ss_id => st_id  => дата => кол-во
-    std::tie(reportStudents, acc) = toStdPair(scan(start, end));
+    //std::tie(reportStudents, acc) = toStdPair(scan(start, end));
+    auto pair = scan(start, end);
+    QMap<int, QString>& reportStudents = pair.first;
+    QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>>& acc = pair.second; // ss_id => st_id  => дата => кол-во
 
     QMap<int, QString> prices = pSectionsModel->dictionary(2); // Цены за занятия
     QMap<int, int> sectionsToTeachers = pSectionsModel->codeDictionary(3);
@@ -778,7 +783,7 @@ void MainWindow::onReportForTeacher()
         if (i > 5)
         {
             doc.write(1, 1, itth->second, boldFormat);
-            doc.write(2, 1, tr("Расчётный период с %1 по %2")
+            doc.write(2, 1, QString("Расчётный период с %1 по %2") // todo: Russian string in code!
                 .arg(start.toString(Configuration::date_format))
                 .arg(end.toString(Configuration::date_format))
             );
@@ -795,9 +800,9 @@ void MainWindow::onReportForTeacher()
                 if (!sections.contains(itss.key()))
                     continue;
 
+                doc.mergeCells(CellRange(4, j, 4, j+1));
                 doc.write(4, j, itss.value().first, wrapFormat);
                 doc.setRowHeight(4, 60);
-                doc.mergeCells(CellRange(4, j, 4, j+1));
                 doc.write(5, j, tr("Amount"));
                 doc.write(5, j+1, tr("Summa"));
                 j += 2;
@@ -832,9 +837,10 @@ void MainWindow::onReportForDirector()
 
     QApplication::setOverrideCursor(Qt::WaitCursor);  // курсор "ожидание"
 
-    QMap<int, QString> reportStudents;
-    QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>> acc;
-    std::tie(reportStudents, acc) = toStdPair(scan(start, end));
+    //std::tie(reportStudents, acc) = toStdPair(scan(start, end));
+    auto pair = scan(start, end);
+    QMap<int, QString>& reportStudents = pair.first;
+    QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>>& acc = pair.second;
 
     // Цены за занятия
     QMap<int, QString> prices = pSectionsModel->dictionary(2);

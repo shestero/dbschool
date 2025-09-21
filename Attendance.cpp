@@ -21,6 +21,7 @@ Attendance::Attendance(const QString& filePath)
 
     // Создание потока для чтения текста
     QTextStream in(&file);
+    in.setCodec("UTF-8");
 
     // Чтение файла построчно
     auto acc = QMap<QString, QString>();
@@ -35,6 +36,7 @@ Attendance::Attendance(const QString& filePath)
         acc.insert(withEmpty.at(0), line.section("\t", 1));
         // todo: save counters into separate collection
     }
+    qDebug() << "attendance.acc" << acc;
 
     // Заполнение полей структуры
     id = QFileInfo(filePath).fileName();
@@ -55,7 +57,6 @@ Attendance::Attendance(const QString& filePath)
 
         QStringList row = acc[s].split('\t');
         students.insert(st_id, row.toVector());
-
     }
 
     // Закрытие файла

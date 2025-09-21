@@ -12,8 +12,6 @@
 #include <QFile>
 #include <QTextStream>
 #include <QDebug>
-#include <qt5/QtCore/qnamespace.h>
-//#include <qt5/QtCore/qnamespace.h>
 
 CSVTableModel::CSVTableModel(QObject *parent, const QString& file_name):
     QStandardItemModel(parent), file_name(file_name)
@@ -179,7 +177,7 @@ QMap<int, QString> CSVTableModel::dictionary(int titleCol) const
                 "at file" << file_name;
             continue;
         }
-        ret.insert(key, secondary->text());
+        ret.insert(key, secondary->text()); // ->data().toString());
     }
     return ret;
 }
