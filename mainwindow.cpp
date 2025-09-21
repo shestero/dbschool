@@ -271,20 +271,105 @@ QPair<QMap<int, QString>, QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>>
 
 void MainWindow::onCreateAttendanceTables()
 {
-    QDate date = gl_lastAttendanceDate.get();
+    QDate date = QDate::currentDate();
+    //QDate date = gl_lastAttendanceDate.get();
+    //QDate date = reportCalendarWidget->selectedDate();
     const QDate searchDate = date.addDays(-Configuration().window_days);
 
+    const QDate end = QDate(date.year(), date.month(), 14);
+    QDate prevMonth = end.addMonths(-1);
+    const QDate start = QDate(prevMonth.year(), prevMonth.month(), 15);
+
     logger->writeTimestamp(
-        tr("Creating tables by attendances from %1").arg(searchDate.toString(Configuration::date_format))
+        tr("Creating tables by attendances from %1 till %2 (looking back as down to %3)")
+            .arg(start.toString(Configuration::date_format))
+            .arg(end.toString(Configuration::date_format))
+            .arg(searchDate.toString(Configuration::date_format))
     );
 
-    QMap<int, QString> _students;
+    QMap<int, QString> students;
     QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>> acc;  // ss_id => st_id => дата => кол-во
-    std::tie(_students, acc) = toStdPair(scan(searchDate, QDate::currentDate()));
+    std::tie(students, acc) = toStdPair(scan(searchDate, QDate::currentDate()));
     qDebug() << "acc.size=" << acc.size();
-    for (auto it = acc.constBegin(); it != acc.constEnd(); ++it) {
-        qDebug() << it.key() << it.value().first << it.value().second;
 
+    QMap<int, int> sections2Teachers = pSectionsModel->codeDictionary(3);
+    QMap<int, QString> teachers = pTeacherModel->dictionary();
+    qDebug() << "sections2Teachers" << sections2Teachers;
+
+    const QString dateTimeStamp = QDateTime::currentDateTime().toString("yyyy-MM-dd_hhmmss");
+
+    for (auto it = acc.constBegin(); it != acc.constEnd(); ++it) {
+        int th_id = sections2Teachers[it.key()];
+        QString th_name;
+        if (th_id > 0)
+        {
+            if (teachers.contains(th_id))
+            {
+                th_name = teachers[th_id];
+            } else
+            {
+                logger->appendLog(tr("No teacher with code %1").arg(th_id));
+            }
+        } else {
+            logger->appendLog(
+                tr("Cannot find the teacher #%1 for section %2 %3")
+                    .arg(sections2Teachers[it.key()])
+                    .arg(it.key()).arg(it.value().first)
+            );
+        }
+        QString file_name =
+            QString("attendance/outbox/%1-%2-%3.tsv")
+                .arg(th_id, 4, 10, QChar('0'))
+                .arg(it.key(), 4, 10, QChar('0'))
+                .arg(dateTimeStamp);
+
+        qDebug() << file_name << it.key() << it.value().first << th_id << th_name << it.value().second;
+
+        QSet<int> studentsSet = it.value().second.keys().toSet();
+        QList<QPair<int, QString>> sortedStudents;
+        for (int st_id : studentsSet)
+        {
+            if (students.contains(st_id))
+            {
+                QString st_name = students[st_id];
+                sortedStudents.append(QPair<int, QString>(st_id, st_name));
+            } else
+            {
+                logger->appendLog(tr("Warning: No student with id %1; skiping it!").arg(st_id));
+            }
+        }
+        std::sort(sortedStudents.begin(), sortedStudents.end(), [](QPair<int, QString>& a, QPair<int, QString>& b)
+        {
+            if (a.second == b.second)
+                return a.first < b.first;
+            return a.second.compare(b.second, Qt::CaseInsensitive) < 0;
+        });
+
+        QFile file(file_name);
+        if (file.open(QIODevice::WriteOnly))
+        {
+            QTextStream out(&file);
+            out.setCodec("UTF-8");
+
+            if (th_id > 0)
+            {
+                out << "th_id\t" << th_id << "\n"; // Qt::endl;
+            }
+            if (!th_name.isEmpty()) {
+                out << "th_name\t" << th_name << "\n";
+            }
+            out << "ss_id\t" << it.key() << "\n";
+            out << "ss_name\t" << it.value().first << "\n";
+            out << "date_min\t" << start.toString("yyyy-MM-dd") << "\n";
+            out << "date_max\t" << end.toString("yyyy-MM-dd") << "\n";
+
+            for (auto it = sortedStudents.constBegin(); it != sortedStudents.constEnd(); ++it)
+            {
+                out << it->first << "\t" << it->second << "\n";
+            }
+
+            file.close();
+        }
     }
 
     // TODO ...
@@ -467,7 +552,7 @@ void MainWindow::invoices(const QDate& start, const QDate& end)
         int i = 4;
         for (auto it = acc2[student.first].constBegin(); it != acc2[student.first].constEnd(); ++it)
         {
-            doc.write(++i, 2, sections[it.key()], small(wrapFormat));
+            doc.write(++i, 2, sections[it.key()], wrapFormat);
 
             int cnt = 0;
             QList<QPair<QDate, int>> dates;
@@ -494,7 +579,7 @@ void MainWindow::invoices(const QDate& start, const QDate& end)
                 doc.setRowHeight(i, 16 * strDates.size());
 
             doc.write(i, 3, cnt, center());
-            doc.write(i, 4, strDates.join(", \r\n"), wrapFormat);
+            doc.write(i, 4, strDates.join(", \n"), wrapFormat);
             doc.write(i, 5, prices[it.key()], center(moneyFormat));
             doc.write(i, 6, QString("=C%1*E%1").arg(i), center(moneyFormat));
         }
