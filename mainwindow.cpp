@@ -24,12 +24,11 @@ std::pair<T1,T2> toStdPair(const QPair<T1,T2>& qp) {
 #include "csvtablemodel.h"
 #include "generateinvoices.h"
 #include "tableview.h"
+#include "tablewidget.h"
 #include "ForeignKeyDelegate.h"
-#include "ProtocolDialog.h"
 
 #include <QAction>
 #include <QApplication>
-#include <QDir>
 #include <QFileDialog>
 #include <QIcon>
 #include <QLabel>
@@ -37,21 +36,16 @@ std::pair<T1,T2> toStdPair(const QPair<T1,T2>& qp) {
 #include <QMessageBox>
 #include <QSplitter>
 #include <QStatusBar>
-#include <QThread>
 #include <QToolBar>
-#include <QToolButton>
-#include <QVBoxLayout>
 
 #include <QtConcurrent/QtConcurrent>
-#include <QFuture>
-#include <QFutureInterface>
-#include <QFutureWatcher>
 
 // https://github.com/dbzhang800/QtXlsxWriter
 // https://github.com/j2doll/QXlsx.git
 #include "xlsxdocument.h"
 
 #include <QDebug>
+
 
 #define LASTDATE_FILENAME   "last-date.txt"
 static LastAttendanceDate gl_lastAttendanceDate = LastAttendanceDate(LASTDATE_FILENAME);
@@ -89,27 +83,28 @@ MainWindow::MainWindow(QWidget *parent) :
     auto tabs = new QTabWidget(this);
 
     pClassesModel = new CSVTableModel(this, "classes.tsv");
-    TableView* pClasses = new TableView(this, pClassesModel);
-    pClasses->setColumnWidth(1, 300);
+    auto* pClasses = new TableWidget(this, pClassesModel);
+    (*pClasses)->setColumnWidth(1, 300);
     tabs->addTab(pClasses, tr("Classes"));
 
     pStudentsModel = new CSVTableModel(this, "students.tsv", 2, pClassesModel);
-    auto pStudents = new TableView(this, pStudentsModel);
-    pStudents->setItemDelegateForColumn(2, new ForeignKeyDelegate(pClassesModel, this));
-    pStudents->setColumnWidth(1, 400);
-    pStudents->setColumnWidth(2, 240);
+    auto pStudents = new TableWidget(this, pStudentsModel);
+    (*pStudents)->setItemDelegateForColumn(2, new ForeignKeyDelegate(pClassesModel, this));
+    (*pStudents)->setColumnWidth(1, 400);
+    (*pStudents)->setColumnWidth(2, 240);
     tabs->addTab(pStudents, tr("Students"));
 
     pTeacherModel = new CSVTableModel(this, "teachers.tsv");
-    TableView* pTeachers = new TableView(this, pTeacherModel);
-    pTeachers->setColumnWidth(1, 400);
+    auto* pTeachers = new TableWidget(this, pTeacherModel);
+    (*pTeachers)->setColumnWidth(1, 400);
+    (*pTeachers)->setColumnWidth(2, 240);
     tabs->addTab(pTeachers, tr("Teachers"));
 
     pSectionsModel = new CSVTableModel(this, "sections.tsv", 3, pTeacherModel);
-    TableView* pSections = new TableView(this, pSectionsModel);
-    pSections->setItemDelegateForColumn(3, new ForeignKeyDelegate(pTeacherModel, this));
-    pSections->setColumnWidth(1, 400);
-    pSections->setColumnWidth(3, 360);
+    auto pSections = new TableWidget(this, pSectionsModel);
+    (*pSections)->setItemDelegateForColumn(3, new ForeignKeyDelegate(pTeacherModel, this));
+    (*pSections)->setColumnWidth(1, 400);
+    (*pSections)->setColumnWidth(3, 360);
     tabs->addTab(pSections, tr("Sections"));
 
     // Report's calendar
@@ -122,8 +117,11 @@ MainWindow::MainWindow(QWidget *parent) :
         new QAction(QApplication::style()->standardIcon(QStyle::SP_ArrowForward), tr("Send tables"), this);
     QAction* receiveAction =
         new QAction(QApplication::style()->standardIcon(QStyle::SP_ArrowBack), tr("Receive tables"), this);
-    QAction* refreshStudentAction =
+    QAction* refreshStudentsAction =
         new QAction(QApplication::style()->standardIcon(QStyle::SP_BrowserReload), tr("Renew students"), this);
+    QAction* refreshTeachersAction =
+        new QAction(QApplication::style()->standardIcon(QStyle::SP_BrowserReload), tr("Renew teachers"), this);
+
     QAction* issueInvoicesAction =
         new QAction(QApplication::style()->standardIcon(QStyle::SP_FileIcon), tr("Issue invoices"), this);
 
@@ -145,7 +143,8 @@ MainWindow::MainWindow(QWidget *parent) :
     toolBar->addAction(createAction);
     toolBar->addAction(sendAction);
     toolBar->addAction(receiveAction);
-    toolBar->addAction(refreshStudentAction);
+    toolBar->addAction(refreshStudentsAction);
+    toolBar->addAction(refreshTeachersAction);
 
     addToolBarBreak();
     addToolBar(/* Qt::LeftToolBarArea, */ toolBar = new QToolBar(tr("Report tools")));
@@ -175,7 +174,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(createAction, &QAction::triggered, this, &MainWindow::onCreateAttendanceTables);
     connect(sendAction, &QAction::triggered, this, &MainWindow::onSendAttendanceTables);
     connect(receiveAction, &QAction::triggered, this, &MainWindow::onReceiveAttendanceTables);
-    connect(refreshStudentAction, &QAction::triggered, this, &MainWindow::onRefreshStudentTable);
+    connect(refreshStudentsAction, &QAction::triggered, this, &MainWindow::onRefreshStudentsTable);
+    connect(refreshTeachersAction, &QAction::triggered, this, &MainWindow::onRefreshTeachersTable);
     connect(reportForTeacher, &QAction::triggered, this, &MainWindow::onReportForTeacher);
     connect(reportForDirector, &QAction::triggered, this, &MainWindow::onReportForDirector);
     connect(issueInvoicesAction, &QAction::triggered, this, &MainWindow::onIssueInvoices);
@@ -438,7 +438,7 @@ QString MainWindow::calculateSha256Hash(const QString &filePath) {
     }
 }
 
-void MainWindow::onRefreshStudentTable()
+void MainWindow::onRefreshStudentsTable()
 {
     const QString hash_local = calculateSha256Hash(Configuration::students_file);
     if (hash_local.isEmpty())
@@ -470,6 +470,44 @@ void MainWindow::onRefreshStudentTable()
     // Проверки прошли; действительно трубуется обновление
     logger->writeTimestamp(tr("Renew %1").arg(Configuration::students_file));
     if (network->sendStudents())
+    {
+        logger->appendLog(tr("Success"));
+    }
+}
+
+// copy-paste of onRefreshStudentsTable
+void MainWindow::onRefreshTeachersTable()
+{
+    const QString hash_local = calculateSha256Hash(Configuration::teachers_file);
+    if (hash_local.isEmpty())
+        return;
+
+    const QString hash_remote = network->getTeachersHash();
+    qDebug() << "hash_local" << hash_local << "hash_remote=" << hash_remote;
+    if (hash_remote.isEmpty())
+    {
+        logger->appendLog(tr("Unknown problem..."));
+        QMessageBox::critical(
+            this,
+            tr("Renew teachers table"),
+            tr("Cannot get information from the server %1").arg(Configuration().teach_server.c_str())
+        );
+        // return;
+    }
+    if (hash_local == hash_remote)
+    {
+        logger->appendLog(tr("The file is up to date"));
+        QMessageBox::information(
+            this,
+            tr("Renew teachers table"),
+            tr("Teachers table at the server is up to date")
+        );
+        return;
+    }
+
+    // Проверки прошли; действительно трубуется обновление
+    logger->writeTimestamp(tr("Renew %1").arg(Configuration::teachers_file));
+    if (network->sendTeachers())
     {
         logger->appendLog(tr("Success"));
     }

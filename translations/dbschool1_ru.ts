@@ -12,15 +12,15 @@
     <name>GenerateTables</name>
     <message>
         <source>GenerateTables</source>
-        <translation>Создание бланков посещаемости</translation>
+        <translation type="vanished">Создание бланков посещаемости</translation>
     </message>
     <message>
         <source>From: </source>
-        <translation>Начиная с даты: </translation>
+        <translation type="vanished">Начиная с даты: </translation>
     </message>
     <message>
         <source>Till: </source>
-        <translation>По дату (включительно): </translation>
+        <translation type="vanished">По дату (включительно): </translation>
     </message>
     <message>
         <source>Ok</source>
@@ -115,7 +115,7 @@
     </message>
     <message>
         <source>Cannot get information from the server %1</source>
-        <translation>Не удалось прочитаь информацию с сервера %1</translation>
+        <translation type="unfinished">Не удалось прочитать информацию с сервера %1</translation>
     </message>
     <message>
         <source>Students table at the server is up to date</source>
@@ -238,10 +238,6 @@
         <translation>Файлы Excel (*.xlsx);;All Files (*)</translation>
     </message>
     <message>
-        <source>Расчётный период с %1 по %2</source>
-        <translation type="unfinished"></translation>
-    </message>
-    <message>
         <source>Full  name</source>
         <translation type="vanished">ФИО</translation>
     </message>
@@ -336,6 +332,18 @@
     <message>
         <source>Saving invoice for %1 into file %2.</source>
         <translation>Сохраняем счёт для %1 в файл %2</translation>
+    </message>
+    <message>
+        <source>Renew teachers</source>
+        <translation>Обновить список учителей</translation>
+    </message>
+    <message>
+        <source>Renew teachers table</source>
+        <translation>Обновить список учителей</translation>
+    </message>
+    <message>
+        <source>Teachers table at the server is up to date</source>
+        <translation>Таблица учителей на сервере в актуальном состоянии</translation>
     </message>
 </context>
 <context>

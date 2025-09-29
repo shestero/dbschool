@@ -26,6 +26,8 @@ public:
 
     QString getStudentsHash();
     bool sendStudents();
+    QString getTeachersHash();
+    bool sendTeachers();
 
     void sendTable(const QString& file_name);
     void sendTables(const QStringList& files);

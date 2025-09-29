@@ -35,7 +35,8 @@ public slots:
     void onCreateAttendanceTables();
     void onSendAttendanceTables();
     void onReceiveAttendanceTables();
-    void onRefreshStudentTable();
+    void onRefreshStudentsTable();
+    void onRefreshTeachersTable();
     void onIssueInvoices();
     void onReportForTeacher();
     void onReportForDirector();

@@ -70,6 +70,8 @@ add_executable(dbschool1
         ProtocolWidget.h
         toolbarcalendarwidget.cpp
         toolbarcalendarwidget.h
+        tablewidget.cpp
+        tablewidget.h
 )
 
 include(FetchContent)

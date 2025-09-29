@@ -212,6 +212,47 @@ bool NetworkInteraction::sendStudents()
     }
 }
 
+// copy-paste getStudentsHash()
+QString NetworkInteraction::getTeachersHash()
+{
+    auto url = api("teachers/hash");
+    QNetworkRequest request = this->request(url);
+    QNetworkReply* reply = manager->get(request);
+    auto hash = syncReply(reply);
+    return hash;
+}
+
+// copy-paste sendStudents()
+bool NetworkInteraction::sendTeachers()
+{
+    QFile file(Configuration::teachers_file);
+    if (!file.open(QIODevice::ReadOnly))
+    {
+        qWarning() << "Cannot open file " << Configuration::teachers_file;
+        emit appendLog(tr("Cannot open file %1 !").arg(Configuration::teachers_file));
+        return false;
+    }
+
+    // Отправка PUT-запроса
+    auto url = api("teachers");
+    QNetworkRequest request = this->request(url);
+    request.setHeader(QNetworkRequest::ContentTypeHeader, "application/octet-stream");
+    QNetworkReply* reply = manager->put(request, &file);
+    QString response = syncReply(reply);
+    // syncReply блокирует; важно не грохнуть объект file до того, как запрос отработал до конца
+    qDebug() << "response = " << response;
+
+    if (response == "OK")
+    {
+        emit appendLog(tr("%1 was successfully sent").arg(Configuration::teachers_file));
+        return true;
+    } else
+    {
+        emit appendLog(tr("Unable to send %1: %2").arg(Configuration::teachers_file).arg(response));
+        return false;
+    }
+}
+
 bool NetworkInteraction::renameToBak(const QString& filePath)
 {
     QFileInfo info(filePath);
