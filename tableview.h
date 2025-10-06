@@ -6,6 +6,7 @@
 #define TABLEVIEW_H
 
 #include <QTableView>
+#include "CustomComboBoxSortFilterProxyModel.h"
 
 class CSVTableModel;
 
@@ -19,8 +20,17 @@ public:
     void showContextMenu(const QPoint &pos);
     void copySelected();
 
+public slots:
+    void onAddRow();
+    void onDelRow();
+
 protected:
     void keyPressEvent(QKeyEvent *event) override;
+
+private:
+    int selectedRow();
+    QStandardItemModel* internalModel;
+    QSortFilterProxyModel *proxyModel;
 };
 
 

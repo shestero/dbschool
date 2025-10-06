@@ -13,6 +13,8 @@
 #include <QTextStream>
 #include <QDebug>
 
+#include "global.h"
+
 CSVTableModel::CSVTableModel(QObject *parent, const QString& file_name):
     QStandardItemModel(parent), file_name(file_name)
 {
@@ -22,17 +24,22 @@ CSVTableModel::CSVTableModel(QObject *parent, const QString& file_name):
 CSVTableModel::CSVTableModel(QObject *parent, const QString& file_name, int fkColumn, CSVTableModel *pFkModel):
     QStandardItemModel(parent), file_name(file_name)
 {
-    QMap<int, QString> map;
+    QMap<int, QString> map1;
+    QMap<QString, int> map2;
     for (int r = 0; r < pFkModel->rowCount(); r++)
     {
         bool ok = false;
         int index = pFkModel->item(r)->text().toInt(&ok);
         if (ok)
         {
-            map.insert(index, pFkModel->item(r, 1)->text());
+            map1.insert(index, pFkModel->item(r, 1)->text());
+            map2.insert(pFkModel->item(r, 1)->text(), index);
         }
     }
-    load({ { fkColumn, map } });
+
+    foreign = { { fkColumn, map1 } };
+    back = { { fkColumn, map2 } };
+    load();
 
     //parent->setItemDelegateForColumn(fkColumn, new ForeignKeyDelegate(pFkModel, this));
 }
@@ -55,7 +62,7 @@ Qt::ItemFlags CSVTableModel::flags( const QModelIndex & index ) const
     return flag;
 }
 
-void CSVTableModel::load(QMap<int, QMap<int, QString>> foreign)
+void CSVTableModel::load()
 {
     QFile file(file_name);
     if (file.open(QIODevice::ReadOnly)) {
@@ -84,7 +91,7 @@ void CSVTableModel::load(QMap<int, QMap<int, QString>> foreign)
                 // load parsed data to model accordingly
                 for (int j = 0; j < lineList.size(); j++)
                 {
-                    QString value = lineList.at(j);
+                    const QString& value = lineList.at(j);
 
                     auto it = foreign.find(j);
                     QStandardItem *item;
@@ -94,7 +101,7 @@ void CSVTableModel::load(QMap<int, QMap<int, QString>> foreign)
                         auto it1 = it->find(index);
                         if (it1 == it->end())
                         {
-                            qDebug() << "Warning: key " << value << " not found!";
+                            qDebug() << "Warning: (" << file_name << ") key " << value << " not found!";
                             item = new QStandardItem(value);
                             item->setData(QColor(Qt::red), Qt::ForegroundRole);
 
@@ -121,7 +128,8 @@ void CSVTableModel::load(QMap<int, QMap<int, QString>> foreign)
 
 void CSVTableModel::save()
 {
-    QFile file(QString("new-") + file_name);
+    rename_to_bak(file_name);
+    QFile file(file_name);
 
     if (file.open(QIODevice::WriteOnly))
     {
@@ -138,7 +146,17 @@ void CSVTableModel::save()
                     line << horizontalHeaderItem(column)->text();
                 } else {
                     QModelIndex index = this->index(row, column);
-                    line << data(index).toString();
+
+                    QString output = data(index).toString().trimmed();
+                    auto it = back.find(column);
+                    QStandardItem *item;
+                    if (it != back.end())
+                    {
+                        auto itb = it->find(output);
+                        if (itb != it->end())
+                            output = QString::number(*itb);
+                    }
+                    line << output;
                 }
             }
 

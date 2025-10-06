@@ -72,6 +72,8 @@ add_executable(dbschool1
         toolbarcalendarwidget.h
         tablewidget.cpp
         tablewidget.h
+        global.cpp
+        global.h
 )
 
 include(FetchContent)

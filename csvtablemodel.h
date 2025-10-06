@@ -28,11 +28,18 @@ public:
 
     const QString file_name;
 
-    void load(QMap<int, QMap<int, QString>> foreign = {});
-    void save();
+    void load();
 
     QMap<int, QString> dictionary(int titleCol = 1) const;
     QMap<int, int> codeDictionary(int titleCol = 1) const;
+
+protected:
+    QMap<int, QMap<int, QString>> foreign;
+    QMap<int, QMap<QString, int>> back;
+
+public slots:
+    void save();
+
 };
 
 

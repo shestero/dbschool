@@ -15,16 +15,19 @@
 #include "csvtablemodel.h"
 #include "tableview.h"
 
-#include "CustomComboBoxSortFilterProxyModel.h"
+#include <QMessageBox>
 
-TableView::TableView(QWidget *parent, CSVTableModel *model): QTableView(parent) {
+
+TableView::TableView(QWidget *parent, CSVTableModel *model)
+: QTableView(parent), internalModel(model) {
+    proxyModel = new CustomComboBoxSortFilterProxyModel(this);
+
     setContextMenuPolicy(Qt::CustomContextMenu);
     connect(this, &QTableView::customContextMenuRequested, this, &TableView::showContextMenu);
 
     //ReadOnlyDelegate *readOnlyDelegate = new ReadOnlyDelegate(this);
     //setItemDelegateForColumn(0, readOnlyDelegate);
 
-    QSortFilterProxyModel *proxyModel = new CustomComboBoxSortFilterProxyModel(this);
     proxyModel->setSourceModel(model);
     setModel(proxyModel);
     if (model->columnCount() >= 2)
@@ -105,4 +108,92 @@ void TableView::copySelected()
         text += "\n";
     }
     QApplication::clipboard()->setText(text);
+}
+
+int TableView::selectedRow()
+{
+    // 1. Get the current index from the view's selection model.
+    QModelIndex proxyIndex = selectionModel()->currentIndex();
+    qDebug() << "proxyIndex=" << proxyIndex;
+
+    if (!proxyIndex.isValid()) {
+        qDebug() << "No item is currently selected in the view.";
+        return -2;
+    }
+
+    // 2. Map the proxy index to the source index.
+    QModelIndex sourceIndex = proxyModel->mapToSource(proxyIndex);
+    qDebug() << "sourceIndex=" << sourceIndex;
+    if (!proxyIndex.isValid()) {
+        qDebug() << "No item is currently selected in the view.";
+        return -3;
+    }
+
+    qDebug() << "Map selected row: " << selectionModel()->currentIndex().row() << "into" << sourceIndex.row();
+    return sourceIndex.row();
+}
+
+void TableView::onAddRow()
+{
+    int max = 0;
+    for (int i = 0; i < internalModel->rowCount(); i++)
+    {
+        int id = internalModel->index(i,0).data().toInt();
+        if (id > max)
+            max = id;
+    }
+    // int current = selectedRow();
+    int current = internalModel->rowCount();
+
+    if (internalModel->insertRow(current))
+    {
+        qDebug() << "the row was inserted at" << current;
+        internalModel->setItem(current, 0, new QStandardItem(QString::number(max + 1)));
+
+        QModelIndex index = internalModel->index(current, 0);
+        if (index.isValid()) {
+            index = proxyModel->mapFromSource(index);
+            if (index.isValid())
+                scrollTo(index);
+        }
+    }
+}
+
+void TableView::onDelRow()
+{
+    int current = selectedRow();
+    if (current < 0)
+    {
+        QMessageBox::critical(this,
+            tr("Cannot delete row"),
+            tr("Please select row to delete!")
+        );
+        return;
+    }
+
+    QModelIndex index0 = internalModel->index(current, 0, QModelIndex());
+    QModelIndex index1 = internalModel->index(current, 1, QModelIndex());
+    qDebug() << "index to delete:" << index0;
+    if (index0.isValid())
+    {
+        auto index = proxyModel->mapFromSource(index0);
+        if (index.isValid())
+            scrollTo(index);
+    }
+
+    QString k = internalModel->data(index0).toString();
+    QString n = internalModel->data(index1).toString();
+
+    int result = QMessageBox::question(
+        this,
+        tr("Confirm delete the row"),
+        tr("The row starts %1 %2 ...").arg(k).arg(n)
+    );
+    if (result != QMessageBox::Yes)
+    {
+        return;
+    }
+
+    qDebug() << "going to remove row" << current;
+    internalModel->removeRow(current);
 }

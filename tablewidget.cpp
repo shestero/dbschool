@@ -20,12 +20,14 @@ TableWidget::TableWidget(QWidget* parent, CSVTableModel *model) :
 {
     QPushButton *addBtn = new QPushButton(QApplication::style()->standardIcon(QStyle::SP_FileDialogNewFolder), "Add row");
     QPushButton *delBtn = new QPushButton(QApplication::style()->standardIcon(QStyle::SP_TrashIcon), "Delete");
+    QPushButton *delSave = new QPushButton(QApplication::style()->standardIcon(QStyle::SP_DialogSaveButton), "Save");
     QHBoxLayout* buttonLayout = new QHBoxLayout();
     buttonLayout->setContentsMargins(0, 4, 0, 4);
     buttonLayout->setSpacing(6);
     buttonLayout->addWidget(addBtn);
     buttonLayout->addWidget(delBtn);
     buttonLayout->addStretch();
+    buttonLayout->addWidget(delSave);
 
     QVBoxLayout* vLayout = new QVBoxLayout(this);
     vLayout->setMargin(0);
@@ -33,6 +35,10 @@ TableWidget::TableWidget(QWidget* parent, CSVTableModel *model) :
     vLayout->addWidget(tableView);
     vLayout->addLayout(buttonLayout);
     setContentsMargins(0, 0, 0, 0);
+
+    connect(addBtn, &QPushButton::clicked, tableView, &TableView::onAddRow);
+    connect(delBtn, &QPushButton::clicked, tableView, &TableView::onDelRow);
+    connect(delSave, &QPushButton::clicked, model, &CSVTableModel::save);
 }
 
 TableWidget::~TableWidget()
