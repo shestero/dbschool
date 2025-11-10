@@ -7,6 +7,7 @@
 
 #include <QStandardItemModel>
 #include <QMap>
+#include <QTextStream>
 
 class TableView;
 
@@ -29,6 +30,7 @@ public:
     const QString file_name;
 
     void load();
+    void save_to_stream(QTextStream& out);
 
     QMap<int, QString> dictionary(int titleCol = 1) const;
     QMap<int, int> codeDictionary(int titleCol = 1) const;

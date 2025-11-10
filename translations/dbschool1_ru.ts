@@ -12,15 +12,15 @@
     <name>GenerateTables</name>
     <message>
         <source>GenerateTables</source>
-        <translation type="vanished">Создание бланков посещаемости</translation>
+        <translation>Создание бланков посещаемости</translation>
     </message>
     <message>
         <source>From: </source>
-        <translation type="vanished">Начиная с даты: </translation>
+        <translation>Начиная с даты: </translation>
     </message>
     <message>
         <source>Till: </source>
-        <translation type="vanished">По дату (включительно): </translation>
+        <translation>По дату (включительно): </translation>
     </message>
     <message>
         <source>Ok</source>
@@ -115,7 +115,7 @@
     </message>
     <message>
         <source>Cannot get information from the server %1</source>
-        <translation type="unfinished">Не удалось прочитать информацию с сервера %1</translation>
+        <translation>Не удалось прочитать информацию с сервера %1</translation>
     </message>
     <message>
         <source>Students table at the server is up to date</source>
@@ -171,11 +171,11 @@
     </message>
     <message>
         <source>Chromatogram</source>
-        <translation type="unfinished"></translation>
+        <translation></translation>
     </message>
     <message>
         <source>*.txt</source>
-        <translation type="unfinished"></translation>
+        <translation></translation>
     </message>
     <message>
         <source>Report file</source>
@@ -183,7 +183,7 @@
     </message>
     <message>
         <source>*.xlsx</source>
-        <translation type="unfinished"></translation>
+        <translation></translation>
     </message>
     <message>
         <source>Sheet_name</source>
@@ -195,7 +195,7 @@
     </message>
     <message>
         <source>0.1</source>
-        <translation type="unfinished"></translation>
+        <translation></translation>
     </message>
     <message>
         <source>Generate</source>
@@ -227,7 +227,7 @@
     </message>
     <message>
         <source>-report-teacher.xlsx</source>
-        <translation type="unfinished"></translation>
+        <translation></translation>
     </message>
     <message>
         <source>Save teacher&apos;s report</source>
@@ -263,7 +263,7 @@
     </message>
     <message>
         <source>-report-director.xlsx</source>
-        <translation type="unfinished"></translation>
+        <translation></translation>
     </message>
     <message>
         <source>Save director&apos;s report</source>
@@ -344,6 +344,14 @@
     <message>
         <source>Teachers table at the server is up to date</source>
         <translation>Таблица учителей на сервере в актуальном состоянии</translation>
+    </message>
+    <message>
+        <source>No data for this period!</source>
+        <translation>Нет данных за этот период!</translation>
+    </message>
+    <message>
+        <source>Cannot proceed</source>
+        <translation>Невозможно выполнить операцию</translation>
     </message>
 </context>
 <context>
@@ -456,6 +464,37 @@
     <message>
         <source>&amp;Copy</source>
         <translation></translation>
+    </message>
+    <message>
+        <source>Cannot delete row</source>
+        <translation>Не могу удалить строку</translation>
+    </message>
+    <message>
+        <source>Please select row to delete!</source>
+        <translation>Выделите строку для удаления!</translation>
+    </message>
+    <message>
+        <source>Confirm delete the row</source>
+        <translation>Подтвердите удаление строки</translation>
+    </message>
+    <message>
+        <source>The row starts %1 %2 ...</source>
+        <translation>строка начинается с %1 %2 ...</translation>
+    </message>
+</context>
+<context>
+    <name>TableWidget</name>
+    <message>
+        <source>Add row</source>
+        <translation>Добавить строку</translation>
+    </message>
+    <message>
+        <source>Delete</source>
+        <translation>Удалить</translation>
+    </message>
+    <message>
+        <source>Save</source>
+        <translation>Сохранить таблицу</translation>
     </message>
 </context>
 <context>

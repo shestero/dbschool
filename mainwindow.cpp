@@ -4,18 +4,6 @@
 
 #include "mainwindow.h"
 #include "CustomComboBoxSortFilterProxyModel.h"
-#include "cmake-build-debug/_deps/qxlsx-src/QXlsx/header/xlsxcellrange.h"
-#include "cmake-build-debug/_deps/qxlsx-src/QXlsx/header/xlsxcellreference.h"
-#include "cmake-build-debug/_deps/qxlsx-src/QXlsx/header/xlsxformat.h"
-
-/*
-#include <tuple>
-#include <utility>
-template<typename T1, typename T2>
-std::pair<T1,T2> toStdPair(const QPair<T1,T2>& qp) {
-    return {qp.first, qp.second};
-}
-*/
 
 #include "Attendance.h"
 #include "Configuration.h"
@@ -43,6 +31,11 @@ std::pair<T1,T2> toStdPair(const QPair<T1,T2>& qp) {
 // https://github.com/dbzhang800/QtXlsxWriter
 // https://github.com/j2doll/QXlsx.git
 #include "xlsxdocument.h"
+/*
+#include "cmake-build-debug/_deps/qxlsx-src/QXlsx/header/xlsxcellrange.h"
+#include "cmake-build-debug/_deps/qxlsx-src/QXlsx/header/xlsxcellreference.h"
+#include "cmake-build-debug/_deps/qxlsx-src/QXlsx/header/xlsxformat.h"
+*/
 
 #include <QDebug>
 
@@ -697,6 +690,12 @@ void MainWindow::onReportForTeacher()
     QMap<int, QString>& reportStudents = pair.first;
     QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>>& acc = pair.second; // ss_id => st_id  => дата => кол-во
 
+    if (acc.isEmpty())
+    {
+        QMessageBox::critical(this, tr("No data for this period!"), tr("Cannot proceed"));
+        return;
+    }
+
     QMap<int, QString> prices = pSectionsModel->dictionary(2); // Цены за занятия
     QMap<int, int> sectionsToTeachers = pSectionsModel->codeDictionary(3);
     QMap<int, QSet<int>> sectionsByTeacher;
@@ -890,6 +889,12 @@ void MainWindow::onReportForDirector()
     auto pair = scan(start, end);
     QMap<int, QString>& reportStudents = pair.first;
     QMap<int, QPair<QString, QMap<int, QMap<QDate, int>>>>& acc = pair.second;
+
+    if (acc.isEmpty())
+    {
+        QMessageBox::critical(this, tr("No data for this period!"), tr("Cannot proceed"));
+        return;
+    }
 
     // Цены за занятия
     QMap<int, QString> prices = pSectionsModel->dictionary(2);

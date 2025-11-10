@@ -4,6 +4,8 @@
 
 // You may need to build the project (run Qt uic code generator) to get "ui_CSVTableModel.h" resolved
 
+#include "global.h"
+
 #include "csvtablemodel.h"
 #include "ForeignKeyDelegate.h"
 #include "tableview.h"
@@ -11,9 +13,8 @@
 #include <QColor>
 #include <QFile>
 #include <QTextStream>
-#include <QDebug>
 
-#include "global.h"
+#include <QDebug>
 
 CSVTableModel::CSVTableModel(QObject *parent, const QString& file_name):
     QStandardItemModel(parent), file_name(file_name)
@@ -126,44 +127,76 @@ void CSVTableModel::load()
     }
 }
 
-void CSVTableModel::save()
+void CSVTableModel::save_to_stream(QTextStream& out)
 {
-    rename_to_bak(file_name);
-    QFile file(file_name);
-
-    if (file.open(QIODevice::WriteOnly))
+    for (int row = -1; row < rowCount(); row++)
     {
-        QTextStream out(&file);
-        out.setCodec("UTF-8");
-
-        for (int row = -1; row < rowCount(); row++)
+        QStringList line;
+        for (int column = 0; column < columnCount(); column++)
         {
-            QStringList line;
-            for (int column = 0; column < columnCount(); column++)
+            if (row == -1)
             {
-                if (row == -1)
+                line << horizontalHeaderItem(column)->text();
+            } else {
+                QModelIndex index = this->index(row, column);
+
+                QString output = data(index).toString().trimmed();
+                auto it = back.find(column);
+                QStandardItem *item;
+                if (it != back.end())
                 {
-                    line << horizontalHeaderItem(column)->text();
-                } else {
-                    QModelIndex index = this->index(row, column);
-
-                    QString output = data(index).toString().trimmed();
-                    auto it = back.find(column);
-                    QStandardItem *item;
-                    if (it != back.end())
-                    {
-                        auto itb = it->find(output);
-                        if (itb != it->end())
-                            output = QString::number(*itb);
-                    }
-                    line << output;
+                    auto itb = it->find(output);
+                    if (itb != it->end())
+                        output = QString::number(*itb);
                 }
+                line << output;
             }
-
-            out << line.join("\t") << "\n"; // Qt::endl;
         }
 
+        out << line.join("\t") << "\n"; // Qt::endl;
+    }
+}
+
+void CSVTableModel::save()
+{
+    // create text content in memory
+    QByteArray newContent;
+    QTextStream out(&newContent, QIODevice::WriteOnly);
+    out.setCodec("UTF-8");
+    save_to_stream(out);
+    out.flush();
+
+    if (newContent.isEmpty())
+    {
+        qCritical() << "Something wrong with saving" << file_name << "!";
+        return;
+    }
+
+    // read actual content
+    QByteArray oldContent;
+    QFile file(file_name);
+    if (file.open(QIODevice::ReadOnly))
+    {
+        oldContent = file.readAll();
         file.close();
+    } else {
+        qWarning() << "Warning: could not open file" << file_name;
+    }
+
+    if (newContent == oldContent)
+    {
+        qDebug() << "Note: the file" << file_name << "was not changed!";
+        return; // if nothing changed do nothing
+    }
+
+    // saving a new content into the file
+    rename_to_bak(file_name);
+    if (file.open(QIODevice::WriteOnly | QIODevice::Truncate))
+    {
+        file.write(newContent);
+        file.close();
+    } else {
+        qWarning() << "Warning: could not save into file" << file_name;
     }
 }
 
